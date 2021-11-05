@@ -22,7 +22,7 @@ t = 0:delta_t:3.1;
 Q_initial = randi([1,5], nstates, nactions); %initialize Q table with arbitrary values %load('Qcell_4actions2.mat'); %FOR 4 ACTIONS CASE
 Q_update = Q_initial;
 %SAVE DATA FOR EVALUATION
-Connectivity_episodes = cell(1, maxepisodes );
+Connectivity_episodes = cell(1, maxepisodes);
 Connectivity_episodes_learning = cell(1, maxepisodes );
 R_all_episodes = cell(1, maxepisodes );
 A_sum_cooQ_episodes = cell(1, maxepisodes );
