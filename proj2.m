@@ -12,13 +12,15 @@ n = 2; %number of dimensions
 nodes = 50.*rand(num_nodes,n)+50.*repmat([0 1],num_nodes,1);
 statelist   = BuildStateList(num_nodes);  % the list of states
 actionlist  = BuildActionList(); % the list of actions
-nstates     = size(statelist,1);
-nactions    = size(actionlist,1); 
-epsilon_learning     = 0.0001;   % probability of a random action selection for e-greedy policy
+nstates     = length(statelist);
+nactions    = length(actionlist); 
+epsilon_learning = 0.0001;   % probability of a random action selection for e-greedy policy
 delta_t = 0.003; 
 t = 0:delta_t:3.1;
-Q_initial = load('Qcell_4actions2.mat'); %FOR 4 ACTIONS CASE -  EDIT!!!!!
-Q_update = Q_initial.Q;
+
+%Note: Q-table states are indexed at 1, but actual states start at 0
+Q_initial = randi([1,5], nstates, nactions); %initialize Q table with arbitrary values %load('Qcell_4actions2.mat'); %FOR 4 ACTIONS CASE
+Q_update = Q_initial;
 %SAVE DATA FOR EVALUATION
 Connectivity_episodes = cell(1, maxepisodes );
 Connectivity_episodes_learning = cell(1, maxepisodes );
@@ -30,9 +32,9 @@ mean_Delta_Q_epi = cell(1, maxepisodes );
 % %================= START ITERATION ===============
 % 
 % for i=1:maxepisodes
-%     nodes = 90.*rand(num_nodes,n)+90.*repmat([0 1],num_nodes,1);
+%     nodes = 50.*rand(num_nodes,n)+50.*repmat([0 1],num_nodes,1);
 %     %Training
-%     [Q_update, Connectivity, Connectivity_learning, R_all, A_sum_cooQ, mean_Delta_Q]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning );
+%     [Q_update, Connectivity, Connectivity_learning, R_all, A_sum_cooQ, mean_Delta_Q]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning);
 %     %Save data
 %     Connectivity_episodes{i} = Connectivity;
 %     Connectivity_episodes_learning{i} = Connectivity_learning;
@@ -71,3 +73,34 @@ mean_Delta_Q_epi = cell(1, maxepisodes );
 % figure(10), plot(R_all(index_R_all))
 % title('Total Reward in the last episode')
 % grid on
+
+
+%================= FUNCTIONS ===============
+
+function states = BuildStateList(n)
+%     Returns the list of states for RL.
+%     
+%     Parameters
+%     -------------
+%     n : double
+%         The number of nodes in the MSN
+%     
+%     Returns
+%     -------------
+%     states : double array
+%         The encoded states, determined by the number of neighbors a node
+%         can have
+     
+    states = 0:n-1;
+end
+
+function actions = BuildActionList()
+%     Returns the list of actions for RL.
+%     
+%     Returns
+%     --------------
+%     actions : double array
+%         The encoded actions, corresponding with safe places for robots to go to
+    
+    actions = 1:4;
+end
