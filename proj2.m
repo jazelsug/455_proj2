@@ -34,7 +34,7 @@ mean_Delta_Q_epi = cell(1, maxepisodes);
 % for i=1:maxepisodes
 %     nodes = 50.*rand(num_nodes,n)+50.*repmat([0 1],num_nodes,1);
 %     %Training
-%     [Q_update, Connectivity, Connectivity_learning, R_all, A_sum_cooQ, mean_Delta_Q]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning);
+%     [Q_update, Connectivity, Connectivity_learning, R_all, A_sum_cooQ, mean_Delta_Q]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t);
 %     %Save data
 %     Connectivity_episodes{i} = Connectivity;
 %     Connectivity_episodes_learning{i} = Connectivity_learning; %CHECK - is there a point for this??
@@ -77,8 +77,11 @@ mean_Delta_Q_epi = cell(1, maxepisodes);
 
 %================= FUNCTIONS ===============
 
-function [Q_update, Connectivity, Connectivity_learning, R_all, A_sum_cooQ, mean_Delta_Q] = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning)
-%     The Q-Learning reiforcement learning algorithm.
+function [Q_update, Connectivity, Connectivity_learning, ...
+    R_all, A_sum_cooQ, mean_Delta_Q] = Q_Learning(Q_update, ...
+    statelist, actionlist, nstates, nactions, num_nodes, ...
+    n, nodes, epsilon_learning, delta_t, t)
+%     The Q-Learning reinforcement learning algorithm.
 %     
 %     Parameters
 %     -------------
@@ -100,6 +103,10 @@ function [Q_update, Connectivity, Connectivity_learning, R_all, A_sum_cooQ, mean
 %         Positions of nodes (num_nodes x n)
 %     epsilon_learning : double
 %         Constant for epsilon-greedy action selection
+%     delta_t : double
+%         Time step
+%     t : double array
+%         Simulation time
 %         
 %     Returns
 %     --------------
@@ -116,12 +123,6 @@ function [Q_update, Connectivity, Connectivity_learning, R_all, A_sum_cooQ, mean
 %     mean_Delta_Q : double array
 %         Changes in Q-table values
 
-    maxiterations = 100;    %set number of iterations for this episode
-    
-    %start iteration
-    for iteration = 1:maxiterations
-        
-    end
 end
 
 function a = select_action(Q, S, epsilon, num_actions)
@@ -130,9 +131,9 @@ function a = select_action(Q, S, epsilon, num_actions)
 %     Parameters
 %     ------------
 %     Q : double matrix
-%         The current Q table, size grid_size x num_actions
+%         The current Q table
 %     S : double array
-%         The total list of states, size grid_size x grid_size
+%         The total list of states
 %     epsilon : double
 %         A small constant used for epsilon-greedy policy
 %     num_actions : double
@@ -141,7 +142,7 @@ function a = select_action(Q, S, epsilon, num_actions)
 %     Returns
 %     ------------
 %     a : double
-%         The selected action to robot will take
+%         The selected action the robot will take
 
     n = randi([0,1]);
     if n < epsilon
