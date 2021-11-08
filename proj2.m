@@ -19,7 +19,7 @@ delta_t = 0.003;
 t = 0:delta_t:3.1;
 
 %Note: Q-table states are indexed at 1, but actual states start at 0
-Q_initial = randi([1,5], nstates, nactions); %initialize Q table with arbitrary values %load('Qcell_4actions2.mat'); %FOR 4 ACTIONS CASE
+Q_initial = BuildQtableStorage(num_nodes, nstates, nactions); %load('Qcell_4actions2.mat'); %FOR 4 ACTIONS CASE
 Q_update = Q_initial;
 %SAVE DATA FOR EVALUATION
 Connectivity_episodes = cell(1, maxepisodes);
@@ -122,7 +122,9 @@ function [Q_update, Connectivity, Connectivity_learning, ...
 %         Actions taken for all nodes over this episode
 %     mean_Delta_Q : double matrix
 %         Changes in Q-table values for all nodes
-    for iteration = 1:length(t)
+    
+    %Initialize for each node
+    for i = 1:num_nodes
         
     end
 end
@@ -181,4 +183,11 @@ function actions = BuildActionList()
 %         The encoded actions, corresponding with safe places for robots to go to
     
     actions = 1:4;
+end
+
+function Q = BuildQtableStorage(num_nodes, nstates, nactions)
+    Q = cell(1, num_nodes);
+    for i = 1:num_nodes
+       Q{i} = randi([1,5], nstates, nactions); %initialize Q table with arbitrary values
+    end
 end
