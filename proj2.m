@@ -116,13 +116,15 @@ function [Q_update, Connectivity, Connectivity_learning, ...
 %         Connectivity values over this episode
 %     Connectivity_learning : ????
 %         ??????
-%     R_all : double array
-%         Reward values over this episode
-%     A_sum_cooQ : double array
-%         Actions taken over this episode
-%     mean_Delta_Q : double array
-%         Changes in Q-table values
-
+%     R_all : double matrix
+%         Reward values for all nodes over this episode
+%     A_sum_cooQ : double matrix
+%         Actions taken for all nodes over this episode
+%     mean_Delta_Q : double matrix
+%         Changes in Q-table values for all nodes
+    for iteration = 1:length(t)
+        
+    end
 end
 
 function a = select_action(Q, S, epsilon, num_actions)
@@ -154,7 +156,7 @@ function a = select_action(Q, S, epsilon, num_actions)
 end
 
 function states = BuildStateList(n)
-%     Returns the list of states for RL.
+%     Builds the list of states for RL.
 %     
 %     Parameters
 %     -------------
@@ -171,7 +173,7 @@ function states = BuildStateList(n)
 end
 
 function actions = BuildActionList()
-%     Returns the list of actions for RL.
+%     Builds the list of actions for RL.
 %     
 %     Returns
 %     --------------
