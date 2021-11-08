@@ -23,11 +23,11 @@ Q_initial = randi([1,5], nstates, nactions); %initialize Q table with arbitrary 
 Q_update = Q_initial;
 %SAVE DATA FOR EVALUATION
 Connectivity_episodes = cell(1, maxepisodes);
-Connectivity_episodes_learning = cell(1, maxepisodes );
-R_all_episodes = cell(1, maxepisodes );
-A_sum_cooQ_episodes = cell(1, maxepisodes );
-Topo_eva_all_epi = cell(1, maxepisodes );
-mean_Delta_Q_epi = cell(1, maxepisodes );
+Connectivity_episodes_learning = cell(1, maxepisodes);
+R_all_episodes = cell(1, maxepisodes);
+A_sum_cooQ_episodes = cell(1, maxepisodes);
+Topo_eva_all_epi = cell(1, maxepisodes);
+mean_Delta_Q_epi = cell(1, maxepisodes);
 
 % %================= START ITERATION ===============
 % 
@@ -37,7 +37,7 @@ mean_Delta_Q_epi = cell(1, maxepisodes );
 %     [Q_update, Connectivity, Connectivity_learning, R_all, A_sum_cooQ, mean_Delta_Q]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning);
 %     %Save data
 %     Connectivity_episodes{i} = Connectivity;
-%     Connectivity_episodes_learning{i} = Connectivity_learning;
+%     Connectivity_episodes_learning{i} = Connectivity_learning; %CHECK - is there a point for this??
 %     R_all_episodes{i} = R_all;
 %     A_sum_cooQ_episodes{i} = A_sum_cooQ;
 %     mean_Delta_Q_epi{i} = mean_Delta_Q; 
@@ -76,6 +76,81 @@ mean_Delta_Q_epi = cell(1, maxepisodes );
 
 
 %================= FUNCTIONS ===============
+
+function [Q_update, Connectivity, Connectivity_learning, R_all, A_sum_cooQ, mean_Delta_Q] = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning)
+%     The Q-Learning reiforcement learning algorithm.
+%     
+%     Parameters
+%     -------------
+%     Q_update : double matrix
+%         The current Q-table
+%     statelist : double array
+%         The encoded states corresponding with number of neighbors (0-9, indexed at 1)
+%     actionlist : double array
+%         The encoded actions corresponding with the safe places (1-4)
+%     nstates : double
+%         Number of states
+%     nactions : double
+%         Number of actions
+%     num_nodes : double
+%         Number of nodes
+%     n : double
+%         Number of dimensions
+%     nodes : double matrix
+%         Positions of nodes (num_nodes x n)
+%     epsilon_learning : double
+%         Constant for epsilon-greedy action selection
+%         
+%     Returns
+%     --------------
+%     Q_update : double matrix
+%         The updated Q-table
+%     Connectivity : double array
+%         Connectivity values over this episode
+%     Connectivity_learning : ????
+%         ??????
+%     R_all : double array
+%         Reward values over this episode
+%     A_sum_cooQ : double array
+%         Actions taken over this episode
+%     mean_Delta_Q : double array
+%         Changes in Q-table values
+
+    maxiterations = 100;    %set number of iterations for this episode
+    
+    %start iteration
+    for iteration = 1:maxiterations
+        
+    end
+end
+
+function a = select_action(Q, S, epsilon, num_actions)
+%     A function for selecting the action for the robot to take. Uses epsilon-greedy policy.
+%     
+%     Parameters
+%     ------------
+%     Q : double matrix
+%         The current Q table, size grid_size x num_actions
+%     S : double array
+%         The total list of states, size grid_size x grid_size
+%     epsilon : double
+%         A small constant used for epsilon-greedy policy
+%     num_actions : double
+%         The number of actions the robot can take
+%         
+%     Returns
+%     ------------
+%     a : double
+%         The selected action to robot will take
+
+    n = randi([0,1]);
+    if n < epsilon
+        a = randi([1,num_actions]);
+    else
+        [maxReward, max_actions] = max(Q(S,:));
+        a = max_actions(1);
+    end
+end
 
 function states = BuildStateList(n)
 %     Returns the list of states for RL.
