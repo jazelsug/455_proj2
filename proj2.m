@@ -122,11 +122,55 @@ function [Q_update, Connectivity, Connectivity_learning, ...
 %         Actions taken for all nodes over this episode
 %     mean_Delta_Q : double matrix
 %         Changes in Q-table values for all nodes
+
+    r = 30; %Set active range of nodes
     
-    %Initialize for each node
+    s_t = [];   %Keep track of initial states of nodes
+    a_next = []; %Keep track of actions selected by nodes
+    
+    %Determine neighbors for each node
+    [Nei_agent, A] = findNeighbors(nodes, r);
+
     for i = 1:num_nodes
-        
+        s_t(i) = length(Nei_agent{i});  %Node's initial state = number of neighbors
+        a_next(i) = select_action(Q_update{i}, s_t(i), epsilon_learning, nactions); %Node selects an action
     end
+end
+
+function [Nei_agent, A] = findNeighbors(nodes, range)
+%     Function for determining the neighbors of each node in a collection of nodes.
+%     
+%     Parameters
+%     ------------
+%     nodes : double matrix (100x2)
+%         Matrix of node positions in x-y coordinates
+%     range : double
+%         The interaction range of the nodes in the MSN
+%         
+%     Returns
+%     ------------
+%     Nei_agent : cell array (100x1)
+%         A container holding the neighbor indices for each node
+%     A : double matrix (100x100)
+%         The adjacency matrix of nodes
+
+    num_nodes = size(nodes, 1);
+    Nei_agent = cell(num_nodes, 1);  % Initialize cell array to hold indices of neighbors
+    
+    % Iterate through each node i
+    for i = 1:num_nodes
+        for j = 1:num_nodes
+           % Check each node j if it's a neighbor of node i
+           q1 = [nodes(i,1) nodes(i,2)];    % Set q1 with node i values
+           q2 = [nodes(j,1) nodes(j,2)];    % Set q2 with node j values
+           dist = norm(q1-q2);  % Euclidean norm of q1 and q2
+           if i~= j && dist <= range && dist ~= 0
+              Nei_agent{i} = [Nei_agent{i} j];  %Add j to list of i's neighbors
+           end
+        end
+    end
+    
+    A = adjMatrix(nodes, Nei_agent); % Use adjMatrix function to obtain adjacency matrix
 end
 
 function a = select_action(Q, S, epsilon, num_actions)
@@ -136,8 +180,8 @@ function a = select_action(Q, S, epsilon, num_actions)
 %     ------------
 %     Q : double matrix
 %         The current Q table
-%     S : double array
-%         The total list of states
+%     S : double
+%         The current state
 %     epsilon : double
 %         A small constant used for epsilon-greedy policy
 %     num_actions : double
