@@ -193,6 +193,9 @@ function Q_update = Q_Learning(Q_update, ...
     for i = 1:num_nodes
         s_next(i) = length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
         reward = s_next(i); %Reward correlates to number of neighbors at end of episode
+        if reward == num_nodes - 1
+           reward = 15;
+        end
         newMax = max(Q_update{i}(s_next(i),:));  %get max reward of new state from Q-table
         Q_update{i}(s_t(i),a_next(i)) = Q_update{i}(s_t(i),a_next(i)) + alpha * (reward + gamma*newMax - Q_update{i}(s_t(i),a_next(i))); %Update node's q table
     end
@@ -366,7 +369,7 @@ end
 function Q = BuildQtableStorage(num_nodes, nstates, nactions)
     Q = cell(1, num_nodes);
     for i = 1:num_nodes
-       Q{i} = randi([1,2], nstates, nactions); %initialize Q table with arbitrary values
+       Q{i} = randi([0,2], nstates, nactions); %initialize Q table with arbitrary values
     end
 end
 
