@@ -52,6 +52,8 @@ for i=1:maxepisodes
     %decrease probability of a random action selection (for e-greedy selection)
     epsilon_learning = epsilon_learning * 0.99;
 end
+
+figure(3),plot([3,2])
 % 
 % %======================== PLOTS ===========================
 % 
@@ -137,6 +139,7 @@ function Q_update = Q_Learning(Q_update, ...
 %     mean_Delta_Q : double matrix
 %         Changes in Q-table values for all nodes
 
+    %Set parameters
     p_nodes = zeros(num_nodes,n);   % Set initial velocties of MSN
     nodes_old = nodes; %KEEP privious positions of MSN
     d = 15; %Set desired distance among sensor nodes
@@ -155,12 +158,18 @@ function Q_update = Q_Learning(Q_update, ...
     
     [Nei_agent, A] = findNeighbors(nodes, r); %Determine neighbors for each node
 
-    for i = 1:num_nodes
-        s_t(i) = length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
-        a_next(i) = select_action(Q_update{i}, s_t(i), epsilon_learning, nactions); %Node selects an action
-    end
+%     for i = 1:num_nodes
+%         s_t(i) = length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
+%         a_next(i) = select_action(Q_update{i}, s_t(i), epsilon_learning, nactions); %Node selects an action
+%     end
     
     for iteration = 1:length(t)
+        %Initialize
+        for i = 1:num_nodes
+            s_t(i) = length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
+            a_next(i) = select_action(Q_update{i}, s_t(i), epsilon_learning, nactions); %Node selects an action
+        end
+        
         %Plot safe places
         plot(safe_places(:,1),safe_places(:,2),'ro','LineWidth',2,'MarkerEdgeColor','r','MarkerFaceColor','r', 'MarkerSize',4.2)
         hold on
@@ -186,20 +195,32 @@ function Q_update = Q_Learning(Q_update, ...
             end
         end
         hold off
+        
+        
+        s_next = [];    %Keep track of new states of nodes
+        [Nei_agent, A] = findNeighbors(nodes, r); %Determine neighbors for each node
+        for i = 1:num_nodes
+            s_next(i) = length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
+            connect = (1/(num_nodes))*rank(A);
+            reward = s_next(i); %Reward correlates to number of neighbors at end of episode
+            %reward = connect*10;
+            newMax = max(Q_update{i}(s_next(i),:));  %get max reward of new state from Q-table
+            Q_update{i}(s_t(i),a_next(i)) = Q_update{i}(s_t(i),a_next(i)) + alpha * (reward + gamma*newMax - Q_update{i}(s_t(i),a_next(i))); %Update node's q table
+        end
     end
     
     %================= ACTION TAKEN ===============
 
-    s_next = [];    %Keep track of new states of nodes
-    [Nei_agent, A] = findNeighbors(nodes, r); %Determine neighbors for each node
-    for i = 1:num_nodes
-        s_next(i) = length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
-        connect = (1/(num_nodes))*rank(A);
-        reward = s_next(i); %Reward correlates to number of neighbors at end of episode
-        %reward = connect*10;
-        newMax = max(Q_update{i}(s_next(i),:));  %get max reward of new state from Q-table
-        Q_update{i}(s_t(i),a_next(i)) = Q_update{i}(s_t(i),a_next(i)) + alpha * (reward + gamma*newMax - Q_update{i}(s_t(i),a_next(i))); %Update node's q table
-    end
+%     s_next = [];    %Keep track of new states of nodes
+%     [Nei_agent, A] = findNeighbors(nodes, r); %Determine neighbors for each node
+%     for i = 1:num_nodes
+%         s_next(i) = length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
+%         connect = (1/(num_nodes))*rank(A);
+%         reward = s_next(i); %Reward correlates to number of neighbors at end of episode
+%         %reward = connect*10;
+%         newMax = max(Q_update{i}(s_next(i),:));  %get max reward of new state from Q-table
+%         Q_update{i}(s_t(i),a_next(i)) = Q_update{i}(s_t(i),a_next(i)) + alpha * (reward + gamma*newMax - Q_update{i}(s_t(i),a_next(i))); %Update node's q table
+%     end
 end
 
 function [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r, d, p_nodes, dimensions, a_nexts)
@@ -232,7 +253,7 @@ function [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r,
 %         Controls the positions of the nodes in the MSN as time progresses
     
     % Set constants
-    c1_alpha = 67; %ORIGINALLY 30
+    c1_alpha = 67; %ORIGINALLY 30, 67
     c2_alpha = 2*sqrt(c1_alpha);
     c1_mt = 1.1;    % ORIGINALLY 1.1
     Ui = zeros(num_nodes, dimensions);  % initialize Ui matrix to all 0's
@@ -245,16 +266,16 @@ function [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r,
         q_mt = actionToPoint(a_nexts(i)); %Get target for node based off its a_next value
         
         % EDIT - commented section below for initial simplified Ui
-%         for j = 1:length(Nei_agent{i})
-%             % i refers to node i
-%             % j refers to the jth neighbor of node i
-%             phi_alpha_in = sigmaNorm(nodes(Nei_agent{i}(j),:) - nodes(i,:), epsilon);
-%             gradient = gradient + phi_alpha(phi_alpha_in, r, d, epsilon) * nij(nodes(i,:), nodes(Nei_agent{i}(j),:), epsilon);
-%             consensus = consensus + aij(nodes(i,:), nodes(Nei_agent{i}(j),:), epsilon, r) * (p_nodes(Nei_agent{i}(j),:) - p_nodes(i,:));
-%         end
+        for j = 1:length(Nei_agent{i})
+            % i refers to node i
+            % j refers to the jth neighbor of node i
+            phi_alpha_in = sigmaNorm(nodes(Nei_agent{i}(j),:) - nodes(i,:), epsilon);
+            gradient = gradient + phi_alpha(phi_alpha_in, r, d, epsilon) * nij(nodes(i,:), nodes(Nei_agent{i}(j),:), epsilon);
+            consensus = consensus + aij(nodes(i,:), nodes(Nei_agent{i}(j),:), epsilon, r) * (p_nodes(Nei_agent{i}(j),:) - p_nodes(i,:));
+        end
         feedback = nodes(i,:) - q_mt;
-        %Ui(i,:) = (c1_alpha * gradient) + (c2_alpha * consensus) - (c1_mt * feedback);   % Set Ui for node i using gradient, consensus, and feedback
-        Ui(i,:) = -(c1_mt * feedback);  %EDIT - simplified Ui
+        Ui(i,:) = (c1_alpha * gradient) + (c2_alpha * consensus) - (c1_mt * feedback);   % Set Ui for node i using gradient, consensus, and feedback
+        %Ui(i,:) = -(c1_mt * feedback);  %EDIT - simplified Ui
         gradient = 0;
         consensus = 0;
         feedback = 0;
@@ -401,4 +422,172 @@ function [A] = adjMatrix(nodes, Nei_agent)
            end
        end
     end
+end
+
+function result = sigmaNorm(z, epsilon)
+%     Returns the sigma norm of a given value/vector z and an epsilon contant value.
+%     
+%     Parameters
+%     -------------
+%     z : double
+%           Vector of which to take the sigma norm
+%     epsilon : double
+%           A constant used to calculate the sigma norm
+%     
+%     Returns
+%     -----------
+%     result : double
+%           The sigma norm value of vector z
+
+    result = (1/epsilon) * (sqrt(1 + epsilon*(norm(z))^2)-1);
+end
+
+function result = phi_alpha(z, r, d, epsilon)
+%     The action function used to construct a smooth pairwise potential
+%     with finite cut-off in the gradient-based term of the Alg.1 Ui.
+%     
+%     Parameters
+%     -------------
+%     z : double
+%           Sigma norm value of two nodes
+%     r : double
+%           Interaction range of nodes in MSN
+%     d : double
+%           Desired distance of nodes in MSN
+%     espilon : double
+%           A constant for the sigma norm
+%     
+%     Returns
+%     -----------
+%     result : double
+%           Value to be used in Ui gradient-based term
+
+    r_alpha = sigmaNorm(r, epsilon);
+    d_alpha = sigmaNorm(d, epsilon);    %CHECK - is this what d alpha is?
+    result = bump(z/r_alpha) * phi(z-d_alpha);
+end
+
+function result = phi(z)
+%     An uneven sigmoidal function, used in the phi_alpha function.
+%     
+%     Parameters
+%     -------------
+%     z : double
+%     
+%     Returns
+%     -----------
+%     result : double
+
+    %Set constants
+    a = 5;
+    b = 5;
+    c = abs(a-b) / sqrt(4*a*b);
+    
+    sigmaZ = sigma1(z+c);
+    result = 0.5*((a+b)*sigmaZ + (a-b));
+end
+
+function result = bump(z)
+%     A scalar function varying between 0 and 1. Used for construction of smooth potential functions with finite cut-offs and smooth adj. matrices.
+%     
+%     Parameters
+%     -------------
+%     z : double
+%           The input to be smoothened
+%     
+%     Returns
+%     -----------
+%     result : double
+%           The 0 or 1 value
+    
+    h = 0.2;    % Set constant h
+    
+    if z >= 0 && z < h
+        result = 1;
+    elseif z >= h && z <= 1
+        result = 0.5 * (1 + cos(pi*(z-h)/(1-h)));
+    else
+        result = 0;
+    end
+end
+
+function result = nij(i, j, epsilon)
+%     Function for obtaining the vector along the line connecting two nodes.
+%     Used in calculating the gradient-based term in Algorithm 1 Ui.
+%     
+%     Parameters
+%     -------------
+%     i : double array (1x2)
+%           Position of node i
+%     j : double array (1x2)
+%           Position of node j
+%     epsilon : double
+%           A constant
+%     
+%     Returns
+%     -----------
+%     result : double array (1x2)
+%           The vector along the line connecting node i and node j
+
+    result = sigmaE(j-i, epsilon);
+end
+
+function result = sigmaE(z, epsilon)
+%     Function to be used in nij function.
+%     
+%     Parameters
+%     -------------
+%     z : double (1x2)
+%           A vector
+%     epsilon : double
+%           A constant
+%     
+%     Returns
+%     -----------
+%     result : double (1x2)
+%           The resulting vector
+    
+    result = z / (1 + epsilon * sigmaNorm(z, epsilon));
+end
+
+function result = aij(i, j, epsilon, r)
+%     Returns the spatial adjacency matrix given the positions of two nodes, i and j.
+%     
+%     Parameters
+%     -------------
+%     i : double array (1x2)
+%           Position of node i
+%     j : double array (1x2)
+%           Position of node j
+%     epsilon : double
+%           Constant for sigma norm
+%     r : double
+%           Interaction range for nodes in MSN
+%     
+%     Returns
+%     -----------
+%     result : double array (1x2)
+%           The spatial adjacency matrix
+    
+    result = zeros(size(i));    % result is a 1x2 matrix - CHECK
+    
+    if ~isequal(i,j)
+        r_alpha = sigmaNorm(r, epsilon);
+        input_to_bump = sigmaNorm(j-i, epsilon) / r_alpha;
+        result = bump(input_to_bump);
+    end
+end
+
+function result = sigma1(z)
+%     A function to be used in the phi function.
+%     
+%     Parameters
+%     -------------
+%     z : double
+%     
+%     Returns
+%     -----------
+%     result : double
+
+    result = z / sqrt(1+z^2);
 end
