@@ -1,6 +1,6 @@
 % Name: proj2.m
 % Author: Jazel A. Suguitan
-% Last Modified: Nov. 8, 2021
+% Last Modified: Nov. 9, 2021
 
 clc, clear, close all
 
@@ -29,13 +29,19 @@ A_sum_cooQ_episodes = cell(1, maxepisodes);
 Topo_eva_all_epi = cell(1, maxepisodes);
 mean_Delta_Q_epi = cell(1, maxepisodes);
 
+%Set positions of safe places
+safe_places = [];
+for act = 1:nactions
+    safe_places(act,:) = actionToPoint(act);
+end
+
 %================= START ITERATION ===============
 
 for i=1:maxepisodes
     nodes = 50.*rand(num_nodes,n)+50.*repmat([0 1],num_nodes,1);
     %Training
 %    [Q_update, Connectivity, Connectivity_learning, R_all, A_sum_cooQ, mean_Delta_Q]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t);
-    Q_update = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t);
+    Q_update = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
 %     %Save data
 %     Connectivity_episodes{i} = Connectivity;
 %     Connectivity_episodes_learning{i} = Connectivity_learning; %CHECK - is there a point for this??
@@ -86,7 +92,7 @@ end
 
 function Q_update = Q_Learning(Q_update, ...
     statelist, actionlist, nstates, nactions, num_nodes, ...
-    n, nodes, epsilon_learning, delta_t, t)
+    n, nodes, epsilon_learning, delta_t, t, safe_places)
 %     The Q-Learning reinforcement learning algorithm.
 %     
 %     Parameters
@@ -113,6 +119,8 @@ function Q_update = Q_Learning(Q_update, ...
 %         Time step
 %     t : double array
 %         Simulation time
+%     safe_places : double matrix
+%         Positions of safe places
 %         
 %     Returns
 %     --------------
@@ -146,12 +154,6 @@ function Q_update = Q_Learning(Q_update, ...
     a_next = []; %Keep track of actions selected by nodes
     
     [Nei_agent, A] = findNeighbors(nodes, r); %Determine neighbors for each node
-    
-    %Set positions of safe places
-    safe_places = [];
-    for act = 1:nactions
-        safe_places(act,:) = actionToPoint(act);
-    end
 
     for i = 1:num_nodes
         s_t(i) = length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
