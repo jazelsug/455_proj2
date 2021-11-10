@@ -187,7 +187,7 @@ function Q_update = Q_Learning(Q_update, ...
         plot(nodes(:,1),nodes(:,2), '.')
         hold on
         plot(nodes(:,1),nodes(:,2), 'k>','LineWidth',.2,'MarkerEdgeColor','k','MarkerFaceColor','k','MarkerSize',5)
-%         hold off
+        hold off
         for node_i = 1:num_nodes
             tmp=nodes(Nei_agent{node_i},:);
             for j = 1:size(nodes(Nei_agent{node_i},1))
@@ -202,8 +202,8 @@ function Q_update = Q_Learning(Q_update, ...
         for i = 1:num_nodes
             s_next(i) = length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
             connect = (1/(num_nodes))*rank(A);
-            reward = s_next(i); %Reward correlates to number of neighbors at end of episode
-            %reward = connect*10;
+            %reward = s_next(i); %Reward correlates to number of neighbors at end of episode
+            reward = connect*s_next(i);
             newMax = max(Q_update{i}(s_next(i),:));  %get max reward of new state from Q-table
             Q_update{i}(s_t(i),a_next(i)) = Q_update{i}(s_t(i),a_next(i)) + alpha * (reward + gamma*newMax - Q_update{i}(s_t(i),a_next(i))); %Update node's q table
         end
