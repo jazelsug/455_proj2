@@ -34,8 +34,8 @@ mean_Delta_Q_epi = cell(1, maxepisodes);
 
 %3 lines, from proj 1
 nodes_old = nodes; %KEEP privious positions of MSN
-q_nodes_all = cell(size(t,2),num_nodes);
-p_nodes_all = cell(size(t,2),num_nodes);
+% q_nodes_all = cell(size(t,2),num_nodes);
+% p_nodes_all = cell(size(t,2),num_nodes);
 
 %================= SET SAFE PLACE POSITIONS ===============
 safe_places = [];
@@ -159,8 +159,8 @@ function Q_update = Q_Learning(Q_update, ...
     nodes_old = nodes; %KEEP privious positions of MSN
     
     %CHECK - following 2 may have to declared outside fxn
-    q_nodes_all = cell(size(t,2),num_nodes);
-    p_nodes_all = cell(size(t,2),num_nodes);
+%     q_nodes_all = cell(size(t,2),num_nodes);
+%     p_nodes_all = cell(size(t,2),num_nodes);
     q_mean = zeros(size(t,2),n);%Save positions of COM (Center of Mass)
     
     s_t = [];   %Keep track of states of nodes at start of iteration
@@ -178,10 +178,10 @@ function Q_update = Q_Learning(Q_update, ...
     %================= START ITERATION ===============
     
     for iteration = 1:length(t)
-        hold on
+%         hold on
         %Plot safe places
         plot(safe_places(:,1),safe_places(:,2),'ro','LineWidth',2,'MarkerEdgeColor','r','MarkerFaceColor','r', 'MarkerSize',4.2)
-        hold on
+         hold on
         
         %Choose actions for each node
         for i = 1:num_nodes
@@ -192,13 +192,13 @@ function Q_update = Q_Learning(Q_update, ...
         [Nei_agent, A] = findNeighbors(nodes, r);
         [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r, d, p_nodes, n, a_next); %last param used to be qt1
         p_nodes = (nodes - nodes_old)/delta_t; %COMPUTE velocities of sensor nodes
-        p_nodes_all{iteration} = p_nodes; %SAVE VELOCITY OF ALL NODES
+%         p_nodes_all{iteration} = p_nodes; %SAVE VELOCITY OF ALL NODES
         nodes_old = nodes;
         nodes = nodes_old + p_nodes*delta_t  + Ui*delta_t*delta_t /2;
         q_mean(iteration,:) = mean(nodes); %Compute position of COM of MSN
         plot(q_mean(:,1),q_mean(:,2),'ro','LineWidth',2,'MarkerEdgeColor','k', 'MarkerFaceColor','k','MarkerSize',4.2)
-        hold on
-        q_nodes_all{iteration} = nodes;
+%         hold on
+%         q_nodes_all{iteration} = nodes;
         %Connectivity(iteration)= (1/(num_nodes))*rank(A);
         
         %Observe R and S'
@@ -220,7 +220,7 @@ function Q_update = Q_Learning(Q_update, ...
         
         %================= PLOT and LINK SENSOR TOGETHER ===============
         plot(nodes(:,1),nodes(:,2), '.')
-        hold on
+%         hold on
         plot(nodes(:,1),nodes(:,2), 'k>','LineWidth',.2,'MarkerEdgeColor','k','MarkerFaceColor','k','MarkerSize',5)
         hold off
         for node_i = 1:num_nodes
@@ -229,9 +229,9 @@ function Q_update = Q_Learning(Q_update, ...
                 line([nodes(node_i,1),tmp(j,1)],[nodes(node_i,2),tmp(j,2)]) 
             end
         end
+        hold off
     end
-    
-    hold off
+
 end
 
 function [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r, d, p_nodes, dimensions, a_nexts)
