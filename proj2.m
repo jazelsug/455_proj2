@@ -178,10 +178,8 @@ function Q_update = Q_Learning(Q_update, ...
     %================= START ITERATION ===============
     
     for iteration = 1:length(t)
-%         hold on
-        %Plot safe places
         plot(safe_places(:,1),safe_places(:,2),'ro','LineWidth',2,'MarkerEdgeColor','r','MarkerFaceColor','r', 'MarkerSize',4.2)
-         hold on
+        hold on
         
         %Choose actions for each node
         for i = 1:num_nodes
@@ -197,7 +195,7 @@ function Q_update = Q_Learning(Q_update, ...
         nodes = nodes_old + p_nodes*delta_t  + Ui*delta_t*delta_t /2;
         q_mean(iteration,:) = mean(nodes); %Compute position of COM of MSN
         plot(q_mean(:,1),q_mean(:,2),'ro','LineWidth',2,'MarkerEdgeColor','k', 'MarkerFaceColor','k','MarkerSize',4.2)
-%         hold on
+        hold on
 %         q_nodes_all{iteration} = nodes;
         %Connectivity(iteration)= (1/(num_nodes))*rank(A);
         
@@ -220,7 +218,7 @@ function Q_update = Q_Learning(Q_update, ...
         
         %================= PLOT and LINK SENSOR TOGETHER ===============
         plot(nodes(:,1),nodes(:,2), '.')
-%         hold on
+        hold on
         plot(nodes(:,1),nodes(:,2), 'k>','LineWidth',.2,'MarkerEdgeColor','k','MarkerFaceColor','k','MarkerSize',5)
         hold off
         for node_i = 1:num_nodes
@@ -229,6 +227,7 @@ function Q_update = Q_Learning(Q_update, ...
                 line([nodes(node_i,1),tmp(j,1)],[nodes(node_i,2),tmp(j,2)]) 
             end
         end
+        drawnow;
         hold off
     end
 
@@ -264,9 +263,9 @@ function [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r,
 %         Controls the positions of the nodes in the MSN as time progresses
     
     % Set constants
-    c1_alpha = 67; %ORIGINALLY 30, 67
+    c1_alpha = 15; %ORIGINALLY 30, 67
     c2_alpha = 2*sqrt(c1_alpha);
-    c1_mt = 1.1;    % ORIGINALLY 1.1
+    c1_mt = 1.1;    % ORIGINALLY 1.1, 75, 500
     Ui = zeros(num_nodes, dimensions);  % initialize Ui matrix to all 0's
     gradient = 0.;  % Initialize gradient part of Ui equation
     consensus = 0.; % Initialize consensus part of Ui equation
@@ -285,8 +284,9 @@ function [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r,
             consensus = consensus + aij(nodes(i,:), nodes(Nei_agent{i}(j),:), epsilon, r) * (p_nodes(Nei_agent{i}(j),:) - p_nodes(i,:));
         end
         feedback = nodes(i,:) - q_mt;
-        Ui(i,:) = (c1_alpha * gradient) + (c2_alpha * consensus) - (c1_mt * feedback);   % Set Ui for node i using gradient, consensus, and feedback
-        %Ui(i,:) = -(c1_mt * feedback);  %EDIT - simplified Ui
+        
+        %Ui(i,:) = 0.01 * ((c1_alpha * gradient) + (c2_alpha * consensus) - (c1_mt * feedback));   % Set Ui for node i using gradient, consensus, and feedback
+        Ui(i,:) = -(c1_mt * feedback);  %EDIT - simplified Ui
         gradient = 0;
         consensus = 0;
         feedback = 0;
