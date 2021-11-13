@@ -1,6 +1,6 @@
 % Name: proj2.m
 % Author: Jazel A. Suguitan
-% Last Modified: Nov. 10, 2021
+% Last Modified: Nov. 12, 2021
 
 clc, clear, close all
 
@@ -149,7 +149,7 @@ function Q_update = Q_Learning(Q_update, ...
 
     %================= SET PARAMETERS ===============
     
-    d = 15; %Set desired distance among sensor nodes
+    d = 28; %Set desired distance among sensor nodes
     r = 30; %Set active range of nodes
     epsilon = 0.1;  %Set a constant for sigma norm
     alpha = 0.95;
@@ -265,7 +265,7 @@ function [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r,
     % Set constants
     c1_alpha = 15; %ORIGINALLY 30, 67
     c2_alpha = 2*sqrt(c1_alpha);
-    c1_mt = 1.1;    % ORIGINALLY 1.1, 75, 500
+    c1_mt = 5;    % ORIGINALLY 1.1, 75, 500
     Ui = zeros(num_nodes, dimensions);  % initialize Ui matrix to all 0's
     gradient = 0.;  % Initialize gradient part of Ui equation
     consensus = 0.; % Initialize consensus part of Ui equation
@@ -273,7 +273,8 @@ function [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r,
     
     % Sum gradient and consensus values for each node i
     for i = 1:num_nodes
-        q_mt = actionToPoint(a_nexts(i)); %Get target for node based off its a_next value
+        %q_mt = actionToPoint(a_nexts(i)); %Get target for node based off its a_next value
+        q_mt = actionToPoint(3); %Get target for node based off its a_next value
         
         % EDIT - commented section below for initial simplified Ui
         for j = 1:length(Nei_agent{i})
