@@ -1,8 +1,10 @@
-% Name: proj2.m
+% Name: proj2_ind.m
 % Author: Jazel A. Suguitan
-% Last Modified: Nov. 12, 2021
+% Last Modified: Nov. 14, 2021
 
 clc, clear, close all
+
+% ALGORITHM 1: Independent Q-Learning
 
 %================= SET PARAMETERS ===============
 
@@ -48,48 +50,49 @@ end
 for i=1:maxepisodes
     nodes = 50.*rand(num_nodes,n)+50.*repmat([0 1],num_nodes,1);    %Generate new node positions each episode
     %Training
-%    [Q_update, Connectivity, Connectivity_learning, R_all, A_sum_cooQ, mean_Delta_Q]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t);
-    Q_update = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
-%     %Save data
-%     Connectivity_episodes{i} = Connectivity;
-%     Connectivity_episodes_learning{i} = Connectivity_learning; %CHECK - is there a point for this??
-%     R_all_episodes{i} = R_all;
-%     A_sum_cooQ_episodes{i} = A_sum_cooQ;
-%     mean_Delta_Q_epi{i} = mean_Delta_Q; 
-%     disp(['Espisode: ',int2str(i),]) 
+%    [Q_update, Connectivity, Connectivity_learning, R_all, A_sum_cooQ, mean_Delta_Q]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
+    [Q_update, Connectivity, R_all, A_sum_cooQ, mean_Delta_Q]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
+%    Q_update = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
+    %Save data
+    Connectivity_episodes{i} = Connectivity;
+    %Connectivity_episodes_learning{i} = Connectivity_learning; %CHECK - is there a point for this??
+    R_all_episodes{i} = R_all;
+    A_sum_cooQ_episodes{i} = A_sum_cooQ;
+    mean_Delta_Q_epi{i} = mean_Delta_Q; 
+    disp(['Episode: ',int2str(i),]) 
     %decrease probability of a random action selection (for e-greedy selection)
     epsilon_learning = epsilon_learning * 0.99;
 end
 
-figure(3),plot([3,2])
-% 
-% %======================== PLOTS ===========================
-% 
-% %Plot connectivity and action selection evaluations, respectively (LAST EPISODE)
-% figure(3),plot(Connectivity)
-% title('Network Connectivity over the last learning episode')
-% grid on
-% %Plot connectivity and action selection evaluations, respectively (WHOLE EPISODES)
-% Con_epi_mat = cell2mat(Connectivity_episodes); 
-% figure(5), plot(Con_epi_mat)
-% title('Network Connectivity over learning episode')
-% grid on
-% 
-% [A_diff0, index_A_cooQ] = find(A_cooQ_matrix>0);
-% figure(8), plot(A_cooQ_matrix(index_A_cooQ))
-% title('Action Selection over learning episodes')
-% grid on 
-% %Plot total reward
-% R_all_epi_mat = cell2mat(R_all_episodes);
-% [R_all_diff0, index_R]= find(R_all_epi_mat>0);
-% figure(9), plot(R_all_epi_mat(index_R));
-% title('Total reward over learning episodes')
-% grid on
-% %Plot reward in last episode
-% [R_all_diff0, index_R_all]= find(R_all>0);
-% figure(10), plot(R_all(index_R_all))
-% title('Total Reward in the last episode')
-% grid on
+
+%======================== PLOTS ===========================
+
+%Plot connectivity and action selection evaluations, respectively (LAST EPISODE)
+figure(3),plot(Connectivity)
+title('Network Connectivity over the last learning episode')
+grid on
+%Plot connectivity and action selection evaluations, respectively (WHOLE EPISODES)
+Con_epi_mat = cell2mat(Connectivity_episodes); 
+figure(5), plot(Con_epi_mat)
+title('Network Connectivity over learning episode')
+grid on
+
+A_cooQ_matrix = cell2mat(A_sum_cooQ_episodes);
+[A_diff0, index_A_cooQ] = find(A_cooQ_matrix>0);
+figure(8), plot(A_cooQ_matrix(index_A_cooQ))
+title('Action Selection over learning episodes')
+grid on 
+%Plot total reward
+R_all_epi_mat = cell2mat(R_all_episodes);
+[R_all_diff0, index_R]= find(R_all_epi_mat>0);
+figure(9), plot(R_all_epi_mat(index_R));
+title('Total reward over learning episodes')
+grid on
+%Plot reward in last episode
+[R_all_diff0, index_R_all]= find(R_all>0);
+figure(10), plot(R_all(index_R_all))
+title('Total Reward in the last episode')
+grid on
 
 
 %================= FUNCTIONS ===============
@@ -98,11 +101,15 @@ figure(3),plot([3,2])
 % function [Q_update, Connectivity, Connectivity_learning, ...
 %     R_all, A_sum_cooQ, mean_Delta_Q] = Q_Learning(Q_update, ...
 %     statelist, actionlist, nstates, nactions, num_nodes, ...
-%     n, nodes, epsilon_learning, delta_t, t)
+%     n, nodes, epsilon_learning, delta_t, t, safe_places)
 
-function Q_update = Q_Learning(Q_update, ...
+function [Q_update, Connectivity, ...
+    R_all, A_sum_cooQ, mean_Delta_Q] = Q_Learning(Q_update, ...
     statelist, actionlist, nstates, nactions, num_nodes, ...
     n, nodes, epsilon_learning, delta_t, t, safe_places)
+% function Q_update = Q_Learning(Q_update, ...
+%     statelist, actionlist, nstates, nactions, num_nodes, ...
+%     n, nodes, epsilon_learning, delta_t, t, safe_places)
 %     The Q-Learning reinforcement learning algorithm.
 %     
 %     Parameters
@@ -140,16 +147,16 @@ function Q_update = Q_Learning(Q_update, ...
 %         Connectivity values over this episode
 %     Connectivity_learning : ????
 %         ??????
-%     R_all : double matrix
-%         Reward values for all nodes over this episode
-%     A_sum_cooQ : double matrix
+%     R_all : double array
+%         Sum of reward values for all nodes over this episode
+%     A_sum_cooQ : double array
 %         Actions taken for all nodes over this episode
 %     mean_Delta_Q : double matrix
 %         Changes in Q-table values for all nodes
 
     %================= SET PARAMETERS ===============
     
-    d = 28; %Set desired distance among sensor nodes
+    d = 27; %Set desired distance among sensor nodes
     r = 30; %Set active range of nodes
     epsilon = 0.1;  %Set a constant for sigma norm
     alpha = 0.95;
@@ -157,11 +164,14 @@ function Q_update = Q_Learning(Q_update, ...
     
     p_nodes = zeros(num_nodes,n);   % Set initial velocties of MSN
     nodes_old = nodes; %KEEP privious positions of MSN
+    Connectivity = 1:length(t); %Save connectivity of MSN
+    R_all = 1:length(t);    %Save reward values for nodes
+    A_sum_cooQ = 1:length(t);   %Save action values for nodes
     
     %CHECK - following 2 may have to declared outside fxn
 %     q_nodes_all = cell(size(t,2),num_nodes);
 %     p_nodes_all = cell(size(t,2),num_nodes);
-    q_mean = zeros(size(t,2),n);%Save positions of COM (Center of Mass)
+    mean_Delta_Q = zeros(size(t,2),n);%Save positions of COM (Center of Mass)
     
     s_t = [];   %Keep track of states of nodes at start of iteration
     a_next = []; %Keep track of actions selected by nodes
@@ -184,7 +194,10 @@ function Q_update = Q_Learning(Q_update, ...
         %Choose actions for each node
         for i = 1:num_nodes
             a_next(i) = select_action(Q_update{i}, s_t(i), epsilon_learning, nactions); %Node selects an action
+            A_sum_cooQ(iteration) = A_sum_cooQ(iteration) + a_next(i);  %Save action
         end
+        
+        a_next
         
         %Each node takes action a_next(i)
         [Nei_agent, A] = findNeighbors(nodes, r);
@@ -193,11 +206,11 @@ function Q_update = Q_Learning(Q_update, ...
 %         p_nodes_all{iteration} = p_nodes; %SAVE VELOCITY OF ALL NODES
         nodes_old = nodes;
         nodes = nodes_old + p_nodes*delta_t  + Ui*delta_t*delta_t /2;
-        q_mean(iteration,:) = mean(nodes); %Compute position of COM of MSN
-        plot(q_mean(:,1),q_mean(:,2),'ro','LineWidth',2,'MarkerEdgeColor','k', 'MarkerFaceColor','k','MarkerSize',4.2)
+        mean_Delta_Q(iteration,:) = mean(nodes); %Compute position of COM of MSN
+        plot(mean_Delta_Q(:,1),mean_Delta_Q(:,2),'ro','LineWidth',2,'MarkerEdgeColor','k', 'MarkerFaceColor','k','MarkerSize',4.2)
         hold on
 %         q_nodes_all{iteration} = nodes;
-        %Connectivity(iteration)= (1/(num_nodes))*rank(A);
+        Connectivity(iteration)= (1/(num_nodes))*rank(A);
         
         %Observe R and S'
         s_next = [];    %Keep track of new states of nodes
@@ -206,7 +219,8 @@ function Q_update = Q_Learning(Q_update, ...
             s_next(i) = length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
             connect = (1/(num_nodes))*rank(A);
             %reward = s_next(i); %Reward correlates to number of neighbors at end of episode
-            reward = connect*(s_next(i) - 1); %-1 because states are indexed at 1
+            reward = s_next(i) - 1; %-1 because states are indexed at 1
+            R_all(iteration) = R_all(iteration) + reward;   %save reward value
             newMax = max(Q_update{i}(s_next(i),:));  %get max reward of new state from Q-table
             Q_update{i}(s_t(i),a_next(i)) = Q_update{i}(s_t(i),a_next(i)) + alpha * (reward + gamma*newMax - Q_update{i}(s_t(i),a_next(i))); %Update node's q table
         end
@@ -263,9 +277,9 @@ function [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r,
 %         Controls the positions of the nodes in the MSN as time progresses
     
     % Set constants
-    c1_alpha = 15; %ORIGINALLY 30, 67
+    c1_alpha = 10; %ORIGINALLY 30, 67
     c2_alpha = 2*sqrt(c1_alpha);
-    c1_mt = 5;    % ORIGINALLY 1.1, 75, 500
+    c1_mt = 20;    % ORIGINALLY 1.1, 75, 500
     Ui = zeros(num_nodes, dimensions);  % initialize Ui matrix to all 0's
     gradient = 0.;  % Initialize gradient part of Ui equation
     consensus = 0.; % Initialize consensus part of Ui equation
@@ -273,8 +287,8 @@ function [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r,
     
     % Sum gradient and consensus values for each node i
     for i = 1:num_nodes
-        %q_mt = actionToPoint(a_nexts(i)); %Get target for node based off its a_next value
-        q_mt = actionToPoint(3); %Get target for node based off its a_next value
+        q_mt = actionToPoint(a_nexts(i)); %Get target for node based off its a_next value
+        %q_mt = actionToPoint(3); %Make all nodes go to point 3
         
         % EDIT - commented section below for initial simplified Ui
         for j = 1:length(Nei_agent{i})
@@ -286,8 +300,8 @@ function [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r,
         end
         feedback = nodes(i,:) - q_mt;
         
-        %Ui(i,:) = 0.01 * ((c1_alpha * gradient) + (c2_alpha * consensus) - (c1_mt * feedback));   % Set Ui for node i using gradient, consensus, and feedback
-        Ui(i,:) = -(c1_mt * feedback);  %EDIT - simplified Ui
+        Ui(i,:) = ((c1_alpha * gradient) + (c2_alpha * consensus) - (c1_mt * feedback));   % Set Ui for node i using gradient, consensus, and feedback
+        %Ui(i,:) = -(c1_mt * feedback);  %EDIT - simplified Ui
         gradient = 0;
         consensus = 0;
         feedback = 0;
