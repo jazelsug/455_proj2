@@ -69,6 +69,8 @@ end
 
 %======================== PLOTS ===========================
 
+%Requirement 2 - Node trajectories
+
 %Plot node trajectories in first episode
 q_nodes_mat = cell2mat(q_nodes_epi{1});
 figure(2),plot(q_nodes_mat(:,1),q_nodes_mat(:,2),'k.')
@@ -90,32 +92,39 @@ hold on
 plot(q_nodes_epi{maxepisodes}{length(t)}(:,1),q_nodes_epi{maxepisodes}{length(t)}(:,2), 'm>','LineWidth',.2,'MarkerEdgeColor','m','MarkerFaceColor','m','MarkerSize',5)
 title('Node trajectory in last episode')
 
-%Plot connectivity and action selection evaluations, respectively (LAST EPISODE)
-figure(5),plot(Connectivity)
-title('Network Connectivity over the last learning episode')
-grid on
-%Plot connectivity and action selection evaluations, respectively (WHOLE EPISODES)
-Con_epi_mat = cell2mat(Connectivity_episodes); 
-figure(6), plot(Con_epi_mat)
-title('Network Connectivity over learning episode')
-grid on
+% %Plot connectivity and action selection evaluations, respectively (LAST EPISODE)
+% figure(5),plot(Connectivity)
+% title('Network Connectivity over the last learning episode')
+% grid on
+% %Plot connectivity and action selection evaluations, respectively (WHOLE EPISODES)
+% Con_epi_mat = cell2mat(Connectivity_episodes); 
+% figure(6), plot(Con_epi_mat)
+% title('Network Connectivity over learning episode')
+% grid on
 
-A_cooQ_matrix = cell2mat(A_sum_cooQ_episodes);
-[A_diff0, index_A_cooQ] = find(A_cooQ_matrix>0);
-figure(8), plot(A_cooQ_matrix(index_A_cooQ))
-title('Action Selection over learning episodes')
-grid on 
-%Plot total reward
+%Requirement 3 - Individual Rewards of Nodes TODO
+
+%Requirement 4 - Total (Sum) of Rewards
 R_all_epi_mat = cell2mat(R_all_episodes);
 [R_all_diff0, index_R]= find(R_all_epi_mat>0);
 figure(9), plot(R_all_epi_mat(index_R));
 title('Total reward over learning episodes')
 grid on
-%Plot reward in last episode
-[R_all_diff0, index_R_all]= find(R_all>0);
-figure(10), plot(R_all(index_R_all))
-title('Total Reward in the last episode')
-grid on
+
+%Requirement 5 - Total Action Selection of Nodes
+A_cooQ_matrix = cell2mat(A_sum_cooQ_episodes);
+[A_diff0, index_A_cooQ] = find(A_cooQ_matrix>0);
+figure(8), plot(A_cooQ_matrix(index_A_cooQ))
+title('Action Selection over learning episodes')
+grid on 
+
+% %Plot reward in last episode
+% [R_all_diff0, index_R_all]= find(R_all>0);
+% figure(10), plot(R_all(index_R_all))
+% title('Total Reward in the last episode')
+% grid on
+
+%Requirement 6 - Average of Delta Q TODO
 
 
 %================= FUNCTIONS ===============
