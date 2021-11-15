@@ -23,7 +23,7 @@ delta_t = 0.003; %Time step
 t = 0:delta_t:3.1;  %Simulation time
 
 %NOTE: Q-table states are indexed at 1, but actual states start at 0
-Q_initial = BuildQtableStorage(num_nodes, nstates, nactions); %load('Qcell_4actions2.mat'); %FOR 4 ACTIONS CASE
+Q_initial = rand(nstates, nactions);%BuildQtableStorage(num_nodes, nstates, nactions); %load('Qcell_4actions2.mat'); %FOR 4 ACTIONS CASE
 Q_update = Q_initial;
 
 %SAVE DATA FOR EVALUATION
@@ -226,7 +226,7 @@ function [Q_update, Connectivity, ...
         
         %Choose actions for each node
         for i = 1:num_nodes
-            a_next(i) = select_action(Q_update{i}, s_t(i), epsilon_learning, nactions); %Node selects an action
+            a_next(i) = select_action(Q_update, s_t(i), epsilon_learning, nactions); %Node selects an action
             A_sum_cooQ(iteration) = A_sum_cooQ(iteration) + a_next(i);  %Save action
         end
         
@@ -252,8 +252,8 @@ function [Q_update, Connectivity, ...
             %reward = s_next(i); %Reward correlates to number of neighbors at end of episode
             reward = s_next(i) - 1; %-1 because states are indexed at 1
             R_all(iteration) = R_all(iteration) + reward;   %save reward value
-            newMax = max(Q_update{i}(s_next(i),:));  %get max reward of new state from Q-table
-            Q_update{i}(s_t(i),a_next(i)) = Q_update{i}(s_t(i),a_next(i)) + alpha * (reward + gamma*newMax - Q_update{i}(s_t(i),a_next(i))); %Update node's q table
+            newMax = max(Q_update(s_next(i),:));  %get max reward of new state from Q-table
+            Q_update(s_t(i),a_next(i)) = Q_update(s_t(i),a_next(i)) + alpha * (reward + gamma*newMax - Q_update(s_t(i),a_next(i))); %Update node's q table
         end
         
         %Set S = S'
