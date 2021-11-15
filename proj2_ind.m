@@ -1,6 +1,6 @@
 % Name: proj2_ind.m
 % Author: Jazel A. Suguitan
-% Last Modified: Nov. 14, 2021
+% Last Modified: Nov. 15, 2021
 
 clc, clear, close all
 
@@ -29,6 +29,7 @@ Q_update = Q_initial;
 %SAVE DATA FOR EVALUATION
 Connectivity_episodes = cell(1, maxepisodes);
 Connectivity_episodes_learning = cell(1, maxepisodes);
+R_ind_episodes = cell(1, maxepisodes);
 R_all_episodes = cell(1, maxepisodes);
 A_sum_cooQ_episodes = cell(1, maxepisodes);
 Topo_eva_all_epi = cell(1, maxepisodes);
@@ -52,12 +53,13 @@ for i=1:maxepisodes
     nodes = 50.*rand(num_nodes,n)+50.*repmat([0 1],num_nodes,1);    %Generate new node positions each episode
     %Training
 %    [Q_update, Connectivity, Connectivity_learning, R_all, A_sum_cooQ, mean_Delta_Q]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
-    [Q_update, Connectivity, R_all, A_sum_cooQ, mean_Delta_Q, q_nodes_all]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
+    [Q_update, Connectivity, R_nodes, R_sum_all, A_sum_cooQ, mean_Delta_Q, q_nodes_all]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
 %    Q_update = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
     %Save data
     Connectivity_episodes{i} = Connectivity;
     %Connectivity_episodes_learning{i} = Connectivity_learning; %CHECK - is there a point for this??
-    R_all_episodes{i} = R_all;
+    R_ind_episodes{i} = R_nodes;
+    R_all_episodes{i} = R_sum_all;
     A_sum_cooQ_episodes{i} = A_sum_cooQ;
     mean_Delta_Q_epi{i} = mean_Delta_Q; 
     q_nodes_epi{i} = q_nodes_all;
@@ -102,7 +104,19 @@ title('Node trajectory in last episode')
 % title('Network Connectivity over learning episode')
 % grid on
 
-%Requirement 3 - Individual Rewards of Nodes TODO
+%Requirement 3 - Individual Rewards of Nodes
+R_each_node = zeros(length(t)*maxepisodes, num_nodes);
+for ep = 1:maxepisodes
+    temp = R_ind_episodes{ep};
+   for i = 1:length(t)
+      for j = 1:num_nodes
+          R_each_node((ep-1)*length(t) + i, j) = temp(i, j);
+      end
+   end
+end
+figure(5), plot(R_each_node);
+title('Individual Reward over learning episodes')
+grid on
 
 %Requirement 4 - Total (Sum) of Rewards
 R_all_epi_mat = cell2mat(R_all_episodes);
@@ -135,8 +149,8 @@ grid on
 %     statelist, actionlist, nstates, nactions, num_nodes, ...
 %     n, nodes, epsilon_learning, delta_t, t, safe_places)
 
-function [Q_update, Connectivity, ...
-    R_all, A_sum_cooQ, mean_Delta_Q, q_nodes_all] = Q_Learning(Q_update, ...
+function [Q_update, Connectivity, R_nodes, ...
+    R_sum_all, A_sum_cooQ, mean_Delta_Q, q_nodes_all] = Q_Learning(Q_update, ...
     statelist, actionlist, nstates, nactions, num_nodes, ...
     n, nodes, epsilon_learning, delta_t, t, safe_places)
 % function Q_update = Q_Learning(Q_update, ...
@@ -181,7 +195,9 @@ function [Q_update, Connectivity, ...
 %         Connectivity values over this episode
 %     Connectivity_learning : ????
 %         ??????
-%     R_all : double array
+%     R_nodes : double matrix
+%         Individual reward values for all nodes over this episode
+%     R_sum_all : double array
 %         Sum of reward values for all nodes over this episode
 %     A_sum_cooQ : double array
 %         Actions taken for all nodes over this episode
@@ -199,7 +215,8 @@ function [Q_update, Connectivity, ...
     p_nodes = zeros(num_nodes,n);   % Set initial velocties of MSN
     nodes_old = nodes; %KEEP privious positions of MSN
     Connectivity = 1:length(t); %Save connectivity of MSN
-    R_all = 1:length(t);    %Save reward values for nodes
+    R_sum_all = 1:length(t);    %Save sum of reward values for nodes
+    R_nodes = zeros(length(t), 10);%cell(length(t),1);    %Sum individual reward values for nodes
     A_sum_cooQ = 1:length(t);   %Save action values for nodes
     q_nodes_all = cell(length(t),1); %cell(1, length(t));
 
@@ -251,7 +268,8 @@ function [Q_update, Connectivity, ...
             connect = (1/(num_nodes))*rank(A);
             %reward = s_next(i); %Reward correlates to number of neighbors at end of episode
             reward = s_next(i) - 1; %-1 because states are indexed at 1
-            R_all(iteration) = R_all(iteration) + reward;   %save reward value
+            R_nodes(iteration, i) = reward; %Save reward value
+            R_sum_all(iteration) = R_sum_all(iteration) + reward;   %Add to sum reward value
             newMax = max(Q_update(s_next(i),:));  %get max reward of new state from Q-table
             Q_update(s_t(i),a_next(i)) = Q_update(s_t(i),a_next(i)) + alpha * (reward + gamma*newMax - Q_update(s_t(i),a_next(i))); %Update node's q table
         end
