@@ -33,6 +33,7 @@ R_all_episodes = cell(1, maxepisodes);
 A_sum_cooQ_episodes = cell(1, maxepisodes);
 Topo_eva_all_epi = cell(1, maxepisodes);
 mean_Delta_Q_epi = cell(1, maxepisodes);
+q_nodes_epi = cell(1, maxepisodes);
 
 %3 lines, from proj 1
 nodes_old = nodes; %KEEP privious positions of MSN
@@ -51,7 +52,7 @@ for i=1:maxepisodes
     nodes = 50.*rand(num_nodes,n)+50.*repmat([0 1],num_nodes,1);    %Generate new node positions each episode
     %Training
 %    [Q_update, Connectivity, Connectivity_learning, R_all, A_sum_cooQ, mean_Delta_Q]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
-    [Q_update, Connectivity, R_all, A_sum_cooQ, mean_Delta_Q]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
+    [Q_update, Connectivity, R_all, A_sum_cooQ, mean_Delta_Q, q_nodes_all]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
 %    Q_update = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
     %Save data
     Connectivity_episodes{i} = Connectivity;
@@ -59,6 +60,7 @@ for i=1:maxepisodes
     R_all_episodes{i} = R_all;
     A_sum_cooQ_episodes{i} = A_sum_cooQ;
     mean_Delta_Q_epi{i} = mean_Delta_Q; 
+    q_nodes_epi{i} = q_nodes_all;
     disp(['Episode: ',int2str(i),]) 
     %decrease probability of a random action selection (for e-greedy selection)
     epsilon_learning = epsilon_learning * 0.99;
@@ -67,13 +69,34 @@ end
 
 %======================== PLOTS ===========================
 
+%Plot node trajectories in first episode
+q_nodes_mat = cell2mat(q_nodes_epi{1});
+figure(2),plot(q_nodes_mat(:,1),q_nodes_mat(:,2),'k.')
+hold on
+plot(q_nodes_epi{1}{length(t)}(:,1),q_nodes_epi{1}{length(t)}(:,2), 'm>','LineWidth',.2,'MarkerEdgeColor','m','MarkerFaceColor','m','MarkerSize',5)
+title('Node trajectory in first episode')
+
+%Plot node trajectories in second episode
+q_nodes_mat = cell2mat(q_nodes_epi{2});
+figure(3),plot(q_nodes_mat(:,1),q_nodes_mat(:,2),'k.')
+hold on
+plot(q_nodes_epi{2}{length(t)}(:,1),q_nodes_epi{2}{length(t)}(:,2), 'm>','LineWidth',.2,'MarkerEdgeColor','m','MarkerFaceColor','m','MarkerSize',5)
+title('Node trajectory in second episode')
+
+%Plot node trajectories in last episode
+q_nodes_mat = cell2mat(q_nodes_epi{maxepisodes});
+figure(4),plot(q_nodes_mat(:,1),q_nodes_mat(:,2),'k.')
+hold on
+plot(q_nodes_epi{maxepisodes}{length(t)}(:,1),q_nodes_epi{maxepisodes}{length(t)}(:,2), 'm>','LineWidth',.2,'MarkerEdgeColor','m','MarkerFaceColor','m','MarkerSize',5)
+title('Node trajectory in last episode')
+
 %Plot connectivity and action selection evaluations, respectively (LAST EPISODE)
-figure(3),plot(Connectivity)
+figure(5),plot(Connectivity)
 title('Network Connectivity over the last learning episode')
 grid on
 %Plot connectivity and action selection evaluations, respectively (WHOLE EPISODES)
 Con_epi_mat = cell2mat(Connectivity_episodes); 
-figure(5), plot(Con_epi_mat)
+figure(6), plot(Con_epi_mat)
 title('Network Connectivity over learning episode')
 grid on
 
@@ -99,12 +122,12 @@ grid on
 
 %EDIT - orig. fxn signature below
 % function [Q_update, Connectivity, Connectivity_learning, ...
-%     R_all, A_sum_cooQ, mean_Delta_Q] = Q_Learning(Q_update, ...
+%     R_all, A_sum_cooQ, mean_Delta_Q, q_nodes_all] = Q_Learning(Q_update, ...
 %     statelist, actionlist, nstates, nactions, num_nodes, ...
 %     n, nodes, epsilon_learning, delta_t, t, safe_places)
 
 function [Q_update, Connectivity, ...
-    R_all, A_sum_cooQ, mean_Delta_Q] = Q_Learning(Q_update, ...
+    R_all, A_sum_cooQ, mean_Delta_Q, q_nodes_all] = Q_Learning(Q_update, ...
     statelist, actionlist, nstates, nactions, num_nodes, ...
     n, nodes, epsilon_learning, delta_t, t, safe_places)
 % function Q_update = Q_Learning(Q_update, ...
@@ -138,6 +161,8 @@ function [Q_update, Connectivity, ...
 %         Simulation time
 %     safe_places : double matrix
 %         Positions of safe places
+%     q_nodes_all : double matrix
+%         Positions of nodes over the episode
 %         
 %     Returns
 %     --------------
@@ -156,7 +181,7 @@ function [Q_update, Connectivity, ...
 
     %================= SET PARAMETERS ===============
     
-    d = 27; %Set desired distance among sensor nodes
+    d = 25.5; %Set desired distance among sensor nodes
     r = 30; %Set active range of nodes
     epsilon = 0.1;  %Set a constant for sigma norm
     alpha = 0.95;
@@ -167,9 +192,8 @@ function [Q_update, Connectivity, ...
     Connectivity = 1:length(t); %Save connectivity of MSN
     R_all = 1:length(t);    %Save reward values for nodes
     A_sum_cooQ = 1:length(t);   %Save action values for nodes
-    
-    %CHECK - following 2 may have to declared outside fxn
-%     q_nodes_all = cell(size(t,2),num_nodes);
+    q_nodes_all = cell(length(t),1); %cell(1, length(t));
+
 %     p_nodes_all = cell(size(t,2),num_nodes);
     mean_Delta_Q = zeros(size(t,2),n);%Save positions of COM (Center of Mass)
     
@@ -197,8 +221,6 @@ function [Q_update, Connectivity, ...
             A_sum_cooQ(iteration) = A_sum_cooQ(iteration) + a_next(i);  %Save action
         end
         
-        a_next
-        
         %Each node takes action a_next(i)
         [Nei_agent, A] = findNeighbors(nodes, r);
         [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r, d, p_nodes, n, a_next); %last param used to be qt1
@@ -209,7 +231,7 @@ function [Q_update, Connectivity, ...
         mean_Delta_Q(iteration,:) = mean(nodes); %Compute position of COM of MSN
         plot(mean_Delta_Q(:,1),mean_Delta_Q(:,2),'ro','LineWidth',2,'MarkerEdgeColor','k', 'MarkerFaceColor','k','MarkerSize',4.2)
         hold on
-%         q_nodes_all{iteration} = nodes;
+        q_nodes_all{iteration} = nodes; %q_nodes_all{iteration}(:,:) = nodes;
         Connectivity(iteration)= (1/(num_nodes))*rank(A);
         
         %Observe R and S'
