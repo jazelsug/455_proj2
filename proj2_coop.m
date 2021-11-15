@@ -1,10 +1,10 @@
-% Name: proj2_ind.m
+% Name: proj2_coop.m
 % Author: Jazel A. Suguitan
-% Last Modified: Nov. 14, 2021
+% Last Modified: Nov. 15, 2021
 
 clc, clear, close all
 
-% ALGORITHM 1: Independent Q-Learning
+% ALGORITHM 1: Cooperative Q-Learning
 
 %================= SET PARAMETERS ===============
 
@@ -195,6 +195,7 @@ function [Q_update, Connectivity, ...
     epsilon = 0.1;  %Set a constant for sigma norm
     alpha = 0.95;
     gamma = 0.05;
+    w = 0.5;    %Set weight for cooperative learning
     
     p_nodes = zeros(num_nodes,n);   % Set initial velocties of MSN
     nodes_old = nodes; %KEEP privious positions of MSN
@@ -253,7 +254,15 @@ function [Q_update, Connectivity, ...
             reward = s_next(i) - 1; %-1 because states are indexed at 1
             R_all(iteration) = R_all(iteration) + reward;   %save reward value
             newMax = max(Q_update(s_next(i),:));  %get max reward of new state from Q-table
-            Q_update(s_t(i),a_next(i)) = Q_update(s_t(i),a_next(i)) + alpha * (reward + gamma*newMax - Q_update(s_t(i),a_next(i))); %Update node's q table
+            Q_component = Q_update(s_t(i),a_next(i)) + alpha * (reward + gamma*newMax - Q_update(s_t(i),a_next(i)));
+            
+            %sum Q-values of neighbors
+            Q_neigh_sum = 0;
+            for j = 1:length(Nei_agent{i})
+                Q_neigh_sum = Q_neigh_sum + Q_update(s_t(Nei_agent{i}(j)), a_next(i));
+            end
+            
+            Q_update(s_t(i),a_next(i)) = (w * Q_component) + ((1-w)*Q_neigh_sum); %Update node's q table
         end
         
         %Set S = S'
