@@ -243,7 +243,10 @@ function [Q_update, Connectivity, R_nodes, ...
         plot(safe_places(:,1),safe_places(:,2),'ro','LineWidth',2,'MarkerEdgeColor','r','MarkerFaceColor','r', 'MarkerSize',4.2)
         hold on
         
+        %Initialize sum values for iteration
         A_sum_cooQ(iteration) = 0;
+        R_sum_all(iteration) = 0;
+        
         %Choose actions for each node
         for i = 1:num_nodes
             a_next(i) = select_action(Q_update, s_t(i), epsilon_learning, nactions); %Node selects an action
