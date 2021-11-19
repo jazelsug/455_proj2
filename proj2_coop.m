@@ -1,6 +1,6 @@
 % Name: proj2_coop.m
 % Author: Jazel A. Suguitan
-% Last Modified: Nov. 15, 2021
+% Last Modified: Nov. 19, 2021
 
 clc, clear, close all
 
@@ -451,7 +451,7 @@ function a = select_action(Q, S, epsilon, num_actions)
 end
 
 function states = BuildStateList(n)
-%     Builds the list of states for RL.
+%     Builds the list of states for RL (assuming 2 dimensions).
 %     
 %     Parameters
 %     -------------
@@ -464,7 +464,23 @@ function states = BuildStateList(n)
 %         The encoded states, determined by the number of neighbors a node
 %         can have
      
-    states = 0:n-1;
+    states = zeros(n*2 +2, 2);
+    for row = 1:n*2 +2
+       for col = 1:2
+           if col == 1
+               if mod(row, 2) == 0
+                   %even row
+                   states(row,col) = row/2 - 1;
+               else
+                   %odd row
+                   states(row,col) = floor(row/2);
+               end
+           else
+              % second column
+              states(row,col) = mod(row-1, 2);
+           end
+       end
+    end
 end
 
 function actions = BuildActionList()
