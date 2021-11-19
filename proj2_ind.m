@@ -165,7 +165,7 @@ function [Q_update, Connectivity, R_nodes, ...
 %     Q_update : double matrix
 %         The current Q-table
 %     statelist : double array
-%         The encoded states corresponding with number of neighbors (0-9, indexed at 1)
+%         The encoded states
 %     actionlist : double array
 %         The encoded actions corresponding with the safe places (1-4)
 %     nstates : double
@@ -687,4 +687,39 @@ function result = sigma1(z)
 %     result : double
 
     result = z / sqrt(1+z^2);
+end
+
+function state = DiscretizeState(nodes, currNodeInd, neighborList)
+%     Returns a single state for a node from that node's list of neighbors.
+%     
+%     Parameters
+%     ------------
+%     nodes : double matrix
+%         Positions of nodes
+%     currNodeInd : double
+%         Index of node whose state is being determined
+%     neighborList : double array
+%         Indices of neighbor nodes for a single node
+%         
+%     Returns
+%     ------------
+%     state : double
+%         Encoded state value
+
+    if length(neighborList) == 0
+        state = 1;
+        return;
+    end
+      
+    minDist = realmax;  %initialize initial distance to largest floating-point value
+    minInd = 1;
+    for i = 1:length(neighborList)
+        dist = norm(nodes(currNodeInd, :) - nodes(neighborList(i),:));
+        if dist < minDist
+            minDist = dist;
+            minInd = neighborList(i);
+        end
+    end
+    
+    state = (minInd + 1) * 2;
 end
