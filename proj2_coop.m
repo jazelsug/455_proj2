@@ -271,10 +271,19 @@ function [Q_update, Connectivity, R_nodes, ...
         s_next = [];    %Keep track of new states of nodes
         [Nei_agent, A] = findNeighbors(nodes, r); %Determine neighbors for each node
         for i = 1:num_nodes
-            s_next(i) = length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
+            s_next(i) = DiscretizeState(nodes, i, Nei_agent{i});%length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
             connect = (1/(num_nodes))*rank(A);
-            %reward = s_next(i); %Reward correlates to number of neighbors at end of episode
-            reward = s_next(i) - 1; %-1 because states are indexed at 1
+            if (1/(num_nodes))*rank(A) == 1
+                %fully connected MSN
+                s_next(i) = 2;
+            end
+            
+            %assign reward
+            if length(Nei_agent{i}) < 6
+                reward = length(Nei_agent{i});
+            else
+                reward = 6;
+            end
             R_nodes(iteration, i) = reward; %Save reward value
             R_sum_all(iteration) = R_sum_all(iteration) + reward;   %save reward value
             newMax = max(Q_update(s_next(i),:));  %get max reward of new state from Q-table
@@ -715,7 +724,7 @@ function state = DiscretizeState(nodes, currNodeInd, neighborList)
 %     state : double
 %         Encoded state value
 
-    if length(neighborList) == 0
+    if isempty(neighborList)
         state = 1;
         return;
     end

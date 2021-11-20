@@ -233,7 +233,13 @@ function [Q_update, Connectivity, R_nodes, ...
 
     [Nei_agent, A] = findNeighbors(nodes, r);   %Determine neighbors for each node
     for i = 1:num_nodes
-        s_t(i) = length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
+        s_t(i) = DiscretizeState(nodes, i, Nei_agent{i});%length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
+%         a_next(i) = select_action(Q_update, s_t(i), epsilon_learning, nactions); %Node selects an action
+    end
+    
+    if (1/(num_nodes))*rank(A) == 1
+        %fully connected MSN
+        s_t(:) = 2;
     end
     
     
@@ -270,10 +276,19 @@ function [Q_update, Connectivity, R_nodes, ...
         s_next = [];    %Keep track of new states of nodes
         [Nei_agent, A] = findNeighbors(nodes, r); %Determine neighbors for each node
         for i = 1:num_nodes
-            s_next(i) = length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
+            s_next(i) = DiscretizeState(nodes, i, Nei_agent{i});%length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
             connect = (1/(num_nodes))*rank(A);
-            %reward = s_next(i); %Reward correlates to number of neighbors at end of episode
-            reward = s_next(i) - 1; %-1 because states are indexed at 1
+            if (1/(num_nodes))*rank(A) == 1
+                %fully connected MSN
+                s_next(i) = 2;
+            end
+            
+            %assign reward
+            if length(Nei_agent{i}) < 6
+                reward = length(Nei_agent{i});
+            else
+                reward = 6;
+            end
             R_nodes(iteration, i) = reward; %Save reward value
             R_sum_all(iteration) = R_sum_all(iteration) + reward;   %Add to sum reward value
             newMax = max(Q_update(s_next(i),:));  %get max reward of new state from Q-table
@@ -343,7 +358,7 @@ function [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r,
     % Sum gradient and consensus values for each node i
     for i = 1:num_nodes
         q_mt = actionToPoint(a_nexts(i)); %Get target for node based off its a_next value
-        %q_mt = actionToPoint(3); %Make all nodes go to point 3
+%         q_mt = actionToPoint(3); %Make all nodes go to point 3
         
         % EDIT - commented section below for initial simplified Ui
         for j = 1:length(Nei_agent{i})
@@ -706,7 +721,7 @@ function state = DiscretizeState(nodes, currNodeInd, neighborList)
 %     state : double
 %         Encoded state value
 
-    if length(neighborList) == 0
+    if isempty(neighborList)
         state = 1;
         return;
     end
