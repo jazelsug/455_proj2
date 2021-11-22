@@ -1,6 +1,6 @@
 % Name: proj2_ind.m
 % Author: Jazel A. Suguitan
-% Last Modified: Nov. 19, 2021
+% Last Modified: Nov. 21, 2021
 
 clc, clear, close all
 
@@ -24,6 +24,7 @@ t = 0:delta_t:3.1;  %Simulation time
 
 %NOTE: Q-table states are indexed at 1, but actual states start at 0
 Q_initial = rand(nstates, nactions);%BuildQtableStorage(num_nodes, nstates, nactions); %load('Qcell_4actions2.mat'); %FOR 4 ACTIONS CASE
+Q_initial(10:10:nstates,:) = 0; %initialize goal Q-table values to 0
 Q_update = Q_initial;
 
 %SAVE DATA FOR EVALUATION
@@ -233,14 +234,14 @@ function [Q_update, Connectivity, R_nodes, ...
 
     [Nei_agent, A] = findNeighbors(nodes, r);   %Determine neighbors for each node
     for i = 1:num_nodes
-        s_t(i) = DiscretizeState(nodes, i, Nei_agent{i});%length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
-%         a_next(i) = select_action(Q_update, s_t(i), epsilon_learning, nactions); %Node selects an action
+        s_t(i) = randi([1,nstates]); %DiscretizeState(nodes, i, Nei_agent{i});%length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
+        a_next(i) = select_action(Q_update, s_t(i), epsilon_learning, nactions); %Node selects an action
     end
     
-    if (1/(num_nodes))*rank(A) == 1
-        %fully connected MSN
-        s_t(:) = 2;
-    end
+%     if (1/(num_nodes))*rank(A) == 1
+%         %fully connected MSN
+%         s_t(:) = 2;
+%     end
     
     
     %================= START ITERATION ===============
@@ -252,11 +253,24 @@ function [Q_update, Connectivity, R_nodes, ...
         %Initialize sum values for iteration
         A_sum_cooQ(iteration) = 0;
         R_sum_all(iteration) = 0;
+        act1 = 0;
+        act2 = 0;
+        act3 = 0;
+        act4 = 0;
         
         %Choose actions for each node
         for i = 1:num_nodes
-            a_next(i) = select_action(Q_update, s_t(i), epsilon_learning, nactions); %Node selects an action
+%             a_next(i) = select_action(Q_update, s_t(i), epsilon_learning, nactions); %Node selects an action
             A_sum_cooQ(iteration) = A_sum_cooQ(iteration) + a_next(i);  %Save action
+            if a_next(i) == 1
+                act1 = act1 + 1;
+            elseif a_next(i) == 2
+                act2 = act2 + 1;
+            elseif a_next(i) == 3
+                act3 = act3 + 1;
+            else
+                act4 = act4 + 1;
+            end
         end
         
         %Each node takes action a_next(i)
@@ -276,19 +290,46 @@ function [Q_update, Connectivity, R_nodes, ...
         s_next = [];    %Keep track of new states of nodes
         [Nei_agent, A] = findNeighbors(nodes, r); %Determine neighbors for each node
         for i = 1:num_nodes
-            s_next(i) = DiscretizeState(nodes, i, Nei_agent{i});%length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
-            connect = (1/(num_nodes))*rank(A);
-            if (1/(num_nodes))*rank(A) == 1
-                %fully connected MSN
-                s_next(i) = 2;
+            %Determine how many nodes chose the same action
+            others = 0;
+            if a_next(i) == 1
+                others = act1;
+            elseif a_next(i) == 2
+                others = act2;
+            elseif a_next(i) == 3
+                others = act3;
+            else
+                others = act4;
             end
             
+            raw_state = [a_next(i), others-1];
+            a = ismember(statelist, raw_state, 'rows');
+            statenum = find(a, 1);
+            
+            s_next(i) = statenum;
+            %DiscretizeState(nodes, i, Nei_agent{i});%length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
+            
+%             connect = (1/(num_nodes))*rank(A);
+%             if (1/(num_nodes))*rank(A) == 1
+%                 %fully connected MSN
+%                 s_next(i) = 2;
+%             end
+            
             %assign reward
-            if length(Nei_agent{i}) < 6
-                reward = length(Nei_agent{i});
+%             if length(Nei_agent{i}) < 6
+%                 reward = length(Nei_agent{i});
+%             else
+%                 reward = 6;
+%             end
+
+            if mod(s_next(i),num_nodes) == 0
+                reward = 50 * length(Nei_agent{i});
+            elseif statelist(s_next(i),2) > statelist(s_t(i),2)
+                reward = 10 * length(Nei_agent{i});
             else
-                reward = 6;
+                reward = length(Nei_agent{i});
             end
+
             R_nodes(iteration, i) = reward; %Save reward value
             R_sum_all(iteration) = R_sum_all(iteration) + reward;   %Add to sum reward value
             newMax = max(Q_update(s_next(i),:));  %get max reward of new state from Q-table
@@ -347,7 +388,7 @@ function [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r,
 %         Controls the positions of the nodes in the MSN as time progresses
     
     % Set constants
-    c1_alpha = 30; %ORIGINALLY 30, 67, 10
+    c1_alpha = 67; %ORIGINALLY 30, 67, 10
     c2_alpha = 2*sqrt(c1_alpha);
     c1_mt = 1.1;    % ORIGINALLY 1.1, 75, 500
     Ui = zeros(num_nodes, dimensions);  % initialize Ui matrix to all 0's
@@ -470,21 +511,36 @@ function states = BuildStateList(n)
 %         The encoded states, determined by the number of neighbors a node
 %         can have
      
-    states = zeros(n*2 +2, 2);
-    for row = 1:n*2 +2
+%     states = zeros(n*2 +2, 2);
+%     for row = 1:n*2 +2
+%        for col = 1:2
+%            if col == 1
+%                if mod(row, 2) == 0
+%                    %even row
+%                    states(row,col) = row/2 - 1;
+%                else
+%                    %odd row
+%                    states(row,col) = floor(row/2);
+%                end
+%            else
+%               % second column
+%               states(row,col) = mod(row-1, 2);
+%            end
+%        end
+%     end
+
+    states = zeros(4*n, 2);
+    for row = 1:4*n
        for col = 1:2
-           if col == 1
-               if mod(row, 2) == 0
-                   %even row
-                   states(row,col) = row/2 - 1;
-               else
-                   %odd row
-                   states(row,col) = floor(row/2);
-               end
-           else
-              % second column
-              states(row,col) = mod(row-1, 2);
-           end
+          if col == 1
+             states(row,col) = ceil(row/n);
+          else
+              if mod(row,n) == 0
+                  states(row,col) = n-1;
+              else
+                  states(row,col) = mod(row,n) - 1;
+              end
+          end
        end
     end
 end
