@@ -117,9 +117,12 @@ figure(7), plot(A_cooQ_matrix(index_A_cooQ))
 title('Action Selection over learning episodes')
 grid on 
 
-%Requirement 6 - Average of Delta Q TODO
-
-
+%Requirement 6 - Average of Delta Q
+mean_Delta_Q_mat = cell2mat(mean_Delta_Q_epi);
+[delta_Q_diff, index_delta_Q] = find(mean_Delta_Q_mat>0);
+figure(8), plot(mean_Delta_Q_mat(index_delta_Q))
+title('Mean Delta Q over learning episodes')
+grid on
 
 %Extra plots below
 
@@ -211,9 +214,10 @@ function [Q_update, Connectivity, R_nodes, ...
     R_nodes = zeros(length(t), 10);%cell(length(t),1);    %Sum individual reward values for nodes
     A_sum_cooQ = 1:length(t);   %Save action values for nodes
     q_nodes_all = cell(length(t),1); %cell(1, length(t));
+    mean_Delta_Q = 1:length(t);
 
 %     p_nodes_all = cell(size(t,2),num_nodes);
-    mean_Delta_Q = zeros(size(t,2),n);%Save positions of COM (Center of Mass)
+    center_of_mass = zeros(size(t,2),n); %Save positions of COM (Center of Mass)
     
     s_t = [];   %Keep track of states of nodes at start of iteration
     a_t = [];
@@ -235,6 +239,9 @@ function [Q_update, Connectivity, R_nodes, ...
         %Randomly select action for node i
         a_t(i) = select_action(Q_update{i}, s_t(i), epsilon_learning, nactions);%randi([1,nactions]);
     end
+    
+    %Keep track of Q tables for each iteration
+    Q_past = cell(1, num_nodes);
     
     for iteration = 1:length(t)
         plot(safe_places(:,1),safe_places(:,2),'ro','LineWidth',2,'MarkerEdgeColor','r','MarkerFaceColor','r', 'MarkerSize',4.2)
@@ -292,8 +299,8 @@ function [Q_update, Connectivity, R_nodes, ...
 %         p_nodes_all{iteration} = p_nodes; %SAVE VELOCITY OF ALL NODES
         nodes_old = nodes;
         nodes = nodes_old + p_nodes*delta_t  + Ui*delta_t*delta_t /2;
-        mean_Delta_Q(iteration,:) = mean(nodes); %Compute position of COM of MSN
-        plot(mean_Delta_Q(:,1),mean_Delta_Q(:,2),'ro','LineWidth',2,'MarkerEdgeColor','k', 'MarkerFaceColor','k','MarkerSize',4.2)
+        center_of_mass(iteration,:) = mean(nodes); %Compute position of COM of MSN
+        plot(center_of_mass(:,1),center_of_mass(:,2),'ro','LineWidth',2,'MarkerEdgeColor','k', 'MarkerFaceColor','k','MarkerSize',4.2)
         hold on
         q_nodes_all{iteration} = nodes; %q_nodes_all{iteration}(:,:) = nodes;
         Connectivity(iteration)= (1/(num_nodes))*rank(A);
@@ -303,6 +310,8 @@ function [Q_update, Connectivity, R_nodes, ...
         %Initialize sum values for iteration
         %A_sum_cooQ(iteration) = 0;
         R_sum_all(iteration) = 0;
+        
+        sum_Delta_Q_row = 1:num_nodes;
         
         %---UPDATE PHASE---
         for i = 1:num_nodes
@@ -326,10 +335,9 @@ function [Q_update, Connectivity, R_nodes, ...
             %Choose next action
             a_next(i) = select_action(Q_update{i}, s_next(i), epsilon_learning, nactions);%randi([1,nactions]);
             A_sum_cooQ(iteration) = A_sum_cooQ(iteration) + a_next(i);
-            %TEST - DELETE LATER
-            if i==1
-                a_next(i)
-            end
+            
+            %Store past Q table
+            Q_past{i} = Q_update{i};
                 
             %Compute Qi value
             newMax = max(Q_update{i}(s_next(i),:));  %get max reward of new state from Q-table %Q_update(s_next(i),a_next(i));
@@ -353,9 +361,13 @@ function [Q_update, Connectivity, R_nodes, ...
             %Set next action as current action
             a_t(i) = a_next(i);
             
-            %---ACTION IMPLEMENTATION PHASE---
-            %?????
+            %Determine Delta Q
+            Delta_Q = Q_update{i} - Q_past{i};
+            sum_Delta_Q_col = sum(abs(Delta_Q));
+            sum_Delta_Q_row(i) = sum(sum_Delta_Q_col);
         end
+        
+        mean_Delta_Q(iteration) = sum(sum_Delta_Q_row(:))/num_nodes;
         
         %================= PLOT and LINK SENSOR TOGETHER ===============
         plot(nodes(:,1),nodes(:,2), '.')
@@ -618,14 +630,11 @@ function a = select_action(Q, S, epsilon, num_actions)
 %         The selected action the robot will take
 
     n = rand;
-    x = 7;
     if n < epsilon
         a = randi([1,num_actions]);
-        x = 0
     else
         [maxReward, max_actions] = max(Q(S,:));
         a = max_actions(1);
-        x= 1;
     end
 end
 
