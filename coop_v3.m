@@ -219,7 +219,22 @@ function [Q_update, Connectivity, R_nodes, ...
     a_t = [];
     s_next = [];
     a_next = []; %Keep track of actions selected by nodes
-    init_act = [];
+    s_real = [];
+    
+    [Nei_agent, A] = findNeighbors(nodes, r);   %Determine neighbors for each node
+    
+    for i = 1:num_nodes
+        %---INITIALIZATION PHASE---
+
+        %Find initial state of node i
+        s_t(i) = DiscretizeState(nodes, i, Nei_agent{i});
+        if (1/(num_nodes))*rank(A) == 1
+            s_t(:) = 2;
+        end
+
+        %Randomly select action for node i
+        a_t(i) = select_action(Q_update{i}, s_t(i), epsilon_learning, nactions);%randi([1,nactions]);
+    end
     
     for iteration = 1:length(t)
         plot(safe_places(:,1),safe_places(:,2),'ro','LineWidth',2,'MarkerEdgeColor','r','MarkerFaceColor','r', 'MarkerSize',4.2)
@@ -227,41 +242,49 @@ function [Q_update, Connectivity, R_nodes, ...
         
         A_sum_cooQ(iteration) = 0;
         
-        [Nei_agent, A] = findNeighbors(nodes, r);   %Determine neighbors for each node
-        for i = 1:num_nodes
-            %---INITIALIZATION PHASE---
+%         for i = 1:num_nodes
+%             %---INITIALIZATION PHASE---
+% 
+%             %Update matrix Qi?????
+% 
+%             %Find initial state of node i
+%             s_t(i) = DiscretizeState(nodes, i, Nei_agent{i});
+%             if (1/(num_nodes))*rank(A) == 1
+%                 s_t(:) = 2;
+%             end
+% 
+%             %Randomly select action for node i
+%             a_t(i) = select_action(Q_update{i}, s_t(i), epsilon_learning, nactions);%randi([1,nactions]);         
+%             init_act(i) = select_action(Q_update{i}, s_t(i), epsilon_learning, nactions);%randi([1,nactions]);
 
-            %Update matrix Qi?????
 
-            %Find initial state of node i
-            s_t(i) = DiscretizeState(nodes, i, Nei_agent{i});
 
-            %Randomly select action for node i
-            %a_t(i) = select_action(Q_update{i}, s_t(i), epsilon_learning, nactions);%randi([1,nactions]);         
-            init_act(i) = select_action(Q_update{i}, s_t(i), epsilon_learning, nactions);%randi([1,nactions]);
-        end
+%             Qi = Q_update{i};
+%             s_real(i,:) = [length(Nei_agent{i}),1]
+%             s_t(i) = DiscretizeState(nodes, i, Nei_agent{i});
+%         end
         
-        for i = 1:num_nodes
-           nei_acts = [];
-           for j = 1:length(Nei_agent{i})
-               nei_acts = [nei_acts init_act(Nei_agent{i}(j))];
-           end
-           
-           act1 = sum(nei_acts(:) == 1);
-           act2 = sum(nei_acts(:) == 2);
-           act3 = sum(nei_acts(:) == 3);
-           act4 = sum(nei_acts(:) == 4);
-           
-           all_acts = [act1, act2, act3, act4];
-           
-           [max_count, max_acts] = max(all_acts);
-           a_t(i) = max_acts(1);
-           A_sum_cooQ(iteration) = A_sum_cooQ(iteration) + a_t(i);
-        end
+%         for i = 1:num_nodes
+%            nei_acts = [];
+%            for j = 1:length(Nei_agent{i})
+%                nei_acts = [nei_acts init_act(Nei_agent{i}(j))];
+%            end
+%            
+%            act1 = sum(nei_acts(:) == 1);
+%            act2 = sum(nei_acts(:) == 2);
+%            act3 = sum(nei_acts(:) == 3);
+%            act4 = sum(nei_acts(:) == 4);
+%            
+%            all_acts = [act1, act2, act3, act4];
+%            
+%            [max_count, max_acts] = max(all_acts);
+%            a_t(i) = max_acts(1);
+%            A_sum_cooQ(iteration) = A_sum_cooQ(iteration) + a_t(i);
+%         end
         
-        if (1/(num_nodes))*rank(A) == 1
-            s_t(:) = 2;
-        end
+%         if (1/(num_nodes))*rank(A) == 1
+%             s_t(:) = 2;
+%         end
 
         %Take a_t actions
         [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r, d, p_nodes, n, a_t); %last param used to be qt1
@@ -291,7 +314,7 @@ function [Q_update, Connectivity, R_nodes, ...
             %A_sum_cooQ(iteration) = A_sum_cooQ(iteration) + a_next(i);
             
             %Compute reward
-            if length(Nei_agent{i}) < 6 && Connectivity(iteration) ~= 1
+            if length(Nei_agent{i}) <= 6 %&& Connectivity(iteration) ~= 1
                 reward = length(Nei_agent{i});
             else
                 reward = 6;
@@ -299,6 +322,14 @@ function [Q_update, Connectivity, R_nodes, ...
             
             R_nodes(iteration, i) = reward; %Save reward value
             R_sum_all(iteration) = R_sum_all(iteration) + reward;
+            
+            %Choose next action
+            a_next(i) = select_action(Q_update{i}, s_next(i), epsilon_learning, nactions);%randi([1,nactions]);
+            A_sum_cooQ(iteration) = A_sum_cooQ(iteration) + a_next(i);
+            %TEST - DELETE LATER
+            if i==1
+                a_next(i)
+            end
                 
             %Compute Qi value
             newMax = max(Q_update{i}(s_next(i),:));  %get max reward of new state from Q-table %Q_update(s_next(i),a_next(i));
@@ -314,10 +345,13 @@ function [Q_update, Connectivity, R_nodes, ...
                 %neigh_sum = neigh_sum + Q_update(s_t(Nei_agent{i}(j)), a_t(i));
                 Q_neigh_sum = Q_neigh_sum + Q_update{Nei_agent{i}(j)};
             end
-            Q_update{i} = 0.001 * ((w * Qi) + ((1-w)*Q_neigh_sum));
+            Q_update{i} = 0.01 * ((w * Qi) + ((1-w)*Q_neigh_sum));
             
             %Set next state as current state
             s_t(i) = s_next(i);
+            
+            %Set next action as current action
+            a_t(i) = a_next(i);
             
             %---ACTION IMPLEMENTATION PHASE---
             %?????
@@ -583,12 +617,15 @@ function a = select_action(Q, S, epsilon, num_actions)
 %     a : double
 %         The selected action the robot will take
 
-    n = randi([0,1]);
+    n = rand;
+    x = 7;
     if n < epsilon
         a = randi([1,num_actions]);
+        x = 0
     else
         [maxReward, max_actions] = max(Q(S,:));
         a = max_actions(1);
+        x= 1;
     end
 end
 
