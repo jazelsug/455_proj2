@@ -4,7 +4,7 @@
 
 clc, clear, close all
 
-% ALGORITHM 2: Independent Q-Learning
+% ALGORITHM 1: Independent Q-Learning
 
 %================= SET PARAMETERS ===============
 
