@@ -1,6 +1,6 @@
 % Name: proj2_coop.m
 % Author: Jazel A. Suguitan
-% Last Modified: Nov. 19, 2021
+% Last Modified: Dec. 1, 2021
 
 clc, clear, close all
 
@@ -22,9 +22,7 @@ p_nodes = zeros(num_nodes,n);   % Set initial velocties of MSN
 delta_t = 0.003; %Time step ORIGINALLY 0.003
 t = 0:delta_t:3.1;  %Simulation time
 
-%NOTE: Q-table states are indexed at 1, but actual states start at 0
-Q_initial = rand(nstates, nactions);%BuildQtableStorage(num_nodes, nstates, nactions); %load('Qcell_4actions2.mat'); %FOR 4 ACTIONS CASE
-Q_initial(2,:) = 0;
+Q_initial = BuildQtableStorage(num_nodes, nstates, nactions);
 Q_update = Q_initial;
 
 %SAVE DATA FOR EVALUATION
@@ -37,10 +35,7 @@ Topo_eva_all_epi = cell(1, maxepisodes);
 mean_Delta_Q_epi = cell(1, maxepisodes);
 q_nodes_epi = cell(1, maxepisodes);
 
-%3 lines, from proj 1
 nodes_old = nodes; %KEEP privious positions of MSN
-% q_nodes_all = cell(size(t,2),num_nodes);
-% p_nodes_all = cell(size(t,2),num_nodes);
 
 %================= SET SAFE PLACE POSITIONS ===============
 safe_places = [];
@@ -53,12 +48,9 @@ end
 for i=1:maxepisodes
     nodes = 50.*rand(num_nodes,n)+50.*repmat([0 1],num_nodes,1);    %Generate new node positions each episode
     %Training
-%    [Q_update, Connectivity, Connectivity_learning, R_all, A_sum_cooQ, mean_Delta_Q]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
     [Q_update, Connectivity, R_nodes, R_sum_all, A_sum_cooQ, mean_Delta_Q, q_nodes_all]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
-%    Q_update = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
     %Save data
     Connectivity_episodes{i} = Connectivity;
-    %Connectivity_episodes_learning{i} = Connectivity_learning; %CHECK - is there a point for this??
     R_ind_episodes{i} = R_nodes;
     R_all_episodes{i} = R_sum_all;
     A_sum_cooQ_episodes{i} = A_sum_cooQ;
@@ -124,17 +116,20 @@ figure(7), plot(A_cooQ_matrix(index_A_cooQ))
 title('Action Selection over learning episodes')
 grid on 
 
-%Requirement 6 - Average of Delta Q TODO
-
-
+%Requirement 6 - Average of Delta Q
+mean_Delta_Q_mat = cell2mat(mean_Delta_Q_epi);
+[delta_Q_diff, index_delta_Q] = find(mean_Delta_Q_mat>0);
+figure(8), plot(mean_Delta_Q_mat(index_delta_Q))
+title('Mean Delta Q over learning episodes')
+grid on
 
 %Extra plots below
 
-%Plot connectivity and action selection evaluations, respectively (LAST EPISODE)
+%Connectivity (LAST EPISODE)
 figure(9),plot(Connectivity)
 title('Network Connectivity over the last learning episode')
 grid on
-%Plot connectivity and action selection evaluations, respectively (WHOLE EPISODES)
+%Connectivity (ALL EPISODES)
 Con_epi_mat = cell2mat(Connectivity_episodes); 
 figure(10), plot(Con_epi_mat)
 title('Network Connectivity over learning episode')
@@ -149,20 +144,11 @@ grid on
 
 %================= FUNCTIONS ===============
 
-%EDIT - orig. fxn signature below
-% function [Q_update, Connectivity, Connectivity_learning, ...
-%     R_all, A_sum_cooQ, mean_Delta_Q, q_nodes_all] = Q_Learning(Q_update, ...
-%     statelist, actionlist, nstates, nactions, num_nodes, ...
-%     n, nodes, epsilon_learning, delta_t, t, safe_places)
-
 function [Q_update, Connectivity, R_nodes, ...
     R_sum_all, A_sum_cooQ, mean_Delta_Q, q_nodes_all] = Q_Learning(Q_update, ...
     statelist, actionlist, nstates, nactions, num_nodes, ...
     n, nodes, epsilon_learning, delta_t, t, safe_places)
-% function Q_update = Q_Learning(Q_update, ...
-%     statelist, actionlist, nstates, nactions, num_nodes, ...
-%     n, nodes, epsilon_learning, delta_t, t, safe_places)
-%     The Q-Learning reinforcement learning algorithm.
+%     Conducts the Q-learning reinforcement algorithm.
 %     
 %     Parameters
 %     -------------
@@ -199,8 +185,6 @@ function [Q_update, Connectivity, R_nodes, ...
 %         The updated Q-table
 %     Connectivity : double array
 %         Connectivity values over this episode
-%     Connectivity_learning : ????
-%         ??????
 %     R_nodes : double matrix
 %         Individual reward values for all nodes over this episode
 %     R_sum_all : double array
@@ -212,9 +196,9 @@ function [Q_update, Connectivity, R_nodes, ...
 
     %================= SET PARAMETERS ===============
     
-    d = 25; %Set desired distance among sensor nodes
-    k = 1.2; %Set scaling factor
-    r = d*k; %Set active range of nodes (30)
+    d = 30; %Set desired distance among sensor nodes
+    k = 1.1; %Set scaling factor
+    r = d*k; %Set active range of nodes
     epsilon = 0.1;  %Set a constant for sigma norm
     alpha = 0.2;
     gamma = 0.9;
@@ -223,94 +207,113 @@ function [Q_update, Connectivity, R_nodes, ...
     p_nodes = zeros(num_nodes,n);   % Set initial velocties of MSN
     nodes_old = nodes; %KEEP privious positions of MSN
     Connectivity = 1:length(t); %Save connectivity of MSN
-    R_sum_all = 1:length(t);    %Save reward values for nodes
-    R_nodes = zeros(length(t), 10);%cell(length(t),1);    %Sum individual reward values for nodes
+    R_sum_all = 1:length(t);    %Sum individual reward values for nodes
+    R_nodes = zeros(length(t), 10); %Save reward values for nodes
     A_sum_cooQ = 1:length(t);   %Save action values for nodes
-    q_nodes_all = cell(length(t),1); %cell(1, length(t));
+    q_nodes_all = cell(length(t),1);    %Save positions of nodes over the episode
+    mean_Delta_Q = 1:length(t); %Save average changes in Q table values over episode
 
 %     p_nodes_all = cell(size(t,2),num_nodes);
-    mean_Delta_Q = zeros(size(t,2),n);%Save positions of COM (Center of Mass)
+    center_of_mass = zeros(size(t,2),n); %Save positions of COM (Center of Mass)
     
-    s_t = [];   %Keep track of states of nodes at start of iteration
-    a_t = [];
-    s_next = [];
-    a_next = []; %Keep track of actions selected by nodes
+    s_t = [];   %Current states of nodes
+    a_t = [];   %Current actions of nodes
+    s_next = [];    %Next states of nodes
+    a_next = []; %Next actions of nodes
     
-    for iteration = 1:length(t)
-        plot(safe_places(:,1),safe_places(:,2),'ro','LineWidth',2,'MarkerEdgeColor','r','MarkerFaceColor','r', 'MarkerSize',4.2)
-        hold on
+    [Nei_agent, A] = findNeighbors(nodes, r);   %Determine neighbors for each node
+    
+    %Initialization
+    for i = 1:num_nodes
+        %Find initial state of node i
+        s_t(i) = DiscretizeState(nodes, i, Nei_agent{i});
         
-        [Nei_agent, A] = findNeighbors(nodes, r);   %Determine neighbors for each node
-        for i = 1:num_nodes
-            %---INITIALIZATION PHASE---
-
-            %Update matrix Qi?????
-
-            %Find initial state of node i
-            s_t(i) = DiscretizeState(nodes, i, Nei_agent{i});
-
-            %Randomly select action for node i
-            a_t(i) = 3; %select_action(Q_update, s_t(i), epsilon_learning, nactions);%randi([1,nactions]);         
-        end
-        
+        %State 2 [0 1] refers to a fully-connected network
         if (1/(num_nodes))*rank(A) == 1
             s_t(:) = 2;
         end
 
+        %Select action for node i given current state
+        a_t(i) = select_action(Q_update{i}, s_t(i), epsilon_learning, nactions);
+    end
+    
+    Q_past = cell(1, num_nodes); %Keep track of Q tables for each iteration
+    
+    %Start episode iterations
+    for iteration = 1:length(t)
+%         a_t  %Uncomment for print out of selected actions each iteration
+        
+        %Plot safe places
+        plot(safe_places(:,1),safe_places(:,2),'ro','LineWidth',2,'MarkerEdgeColor','r','MarkerFaceColor','r', 'MarkerSize',4.2)
+        hold on
+        
+        A_sum_cooQ(iteration) = 0;  %Initialize sum of actions
+
         %Take a_t actions
-        [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r, d, p_nodes, n, a_t); %last param used to be qt1
+        [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r, d, p_nodes, n, a_t);
         p_nodes = (nodes - nodes_old)/delta_t; %COMPUTE velocities of sensor nodes
 %         p_nodes_all{iteration} = p_nodes; %SAVE VELOCITY OF ALL NODES
         nodes_old = nodes;
         nodes = nodes_old + p_nodes*delta_t  + Ui*delta_t*delta_t /2;
-        mean_Delta_Q(iteration,:) = mean(nodes); %Compute position of COM of MSN
-        plot(mean_Delta_Q(:,1),mean_Delta_Q(:,2),'ro','LineWidth',2,'MarkerEdgeColor','k', 'MarkerFaceColor','k','MarkerSize',4.2)
+        center_of_mass(iteration,:) = mean(nodes); %Compute position of COM of MSN
+        
+        %Plot nodes
+        plot(center_of_mass(:,1),center_of_mass(:,2),'ro','LineWidth',2,'MarkerEdgeColor','k', 'MarkerFaceColor','k','MarkerSize',4.2)
         hold on
         q_nodes_all{iteration} = nodes; %q_nodes_all{iteration}(:,:) = nodes;
-        Connectivity(iteration)= (1/(num_nodes))*rank(A);
         
+        Connectivity(iteration)= (1/(num_nodes))*rank(A);
         [Nei_agent, A] = findNeighbors(nodes, r);   %Determine neighbors for each node after taking action
         
-        %Initialize sum values for iteration
-        A_sum_cooQ(iteration) = 0;
-        R_sum_all(iteration) = 0;
+        R_sum_all(iteration) = 0;   %Initialize sum of rewards
+        sum_Delta_Q_row = 1:num_nodes; %Initialize sum of mean delta Q for a row of Q table
         
-        %---UPDATE PHASE---
+        %Observe new state and reward after taking action
         for i = 1:num_nodes
-            %Update next state
-            s_next(i) = DiscretizeState(nodes, i, Nei_agent{i});
-            
-            %Select next action based on max Qi
-            a_next(i) = select_action(Q_update, s_t(i), epsilon_learning, nactions); %Node selects an action - CORRECT???
-            A_sum_cooQ(iteration) = A_sum_cooQ(iteration) + a_next(i);
+            s_next(i) = DiscretizeState(nodes, i, Nei_agent{i});    %Update next state
             
             %Compute reward
-            if length(Nei_agent{i}) < 6
+            if length(Nei_agent{i}) <= 6 %&& Connectivity(iteration) ~= 1
                 reward = length(Nei_agent{i});
             else
                 reward = 6;
             end
             
-            R_nodes(iteration, i) = reward; %Save reward value
+            %Save reward values
+            R_nodes(iteration, i) = reward;
             R_sum_all(iteration) = R_sum_all(iteration) + reward;
+            
+            a_next(i) = select_action(Q_update{i}, s_next(i), epsilon_learning, nactions); %Choose next action
+            
+            A_sum_cooQ(iteration) = A_sum_cooQ(iteration) + a_next(i);  %Save next action
+            
+            Q_past{i} = Q_update{i};    %Store past Q table
                 
             %Compute Qi value
-            newMax = max(Q_update(s_next(i),:));  %get max reward of new state from Q-table %Q_update(s_next(i),a_next(i));
-            Q_component = Q_update(s_t(i),a_t(i)) + alpha * (reward + gamma*newMax - Q_update(s_t(i),a_t(i)));    %CHANGED
+            newMax = max(Q_update{i}(s_next(i),:));  %get max reward of new state from Q-table
+            Qval = Q_update{i}(s_t(i),a_t(i)) + alpha * (reward + gamma*newMax - Q_update{i}(s_t(i),a_t(i)));
+            Qi = Q_update{i};
+            Qi(s_t(i),a_t(i)) = Qval;
             
-            %Update Qi based on neighbors
-            neigh_sum = 0;
+            %Sum Q tables from node neighbors
+            Q_neigh_sum = zeros(nstates, nactions);
             for j = 1:length(Nei_agent{i})
-                neigh_sum = neigh_sum + Q_update(s_t(Nei_agent{i}(j)), a_t(i));
+                Q_neigh_sum = Q_neigh_sum + Q_update{Nei_agent{i}(j)};
             end
-            Q_update(s_t(i),a_t(i)) = 0.001 * ((w * Q_component) + ((1-w)*neigh_sum));
             
-            %Set next state as current state
-            s_t(i) = s_next(i);
+            Q_update{i} = 0.01 * ((w * Qi) + ((1-w)*Q_neigh_sum));  %Update actual Q table
             
-            %---ACTION IMPLEMENTATION PHASE---
-            %?????
+            s_t(i) = s_next(i); %Set next state as current state
+            
+            a_t(i) = a_next(i); %Set next action as current action
+            
+            %Determine Delta Q
+            Delta_Q = Q_update{i} - Q_past{i};
+            sum_Delta_Q_col = sum(abs(Delta_Q));
+            sum_Delta_Q_row(i) = sum(sum_Delta_Q_col);
         end
+        
+        mean_Delta_Q(iteration) = sum(sum_Delta_Q_row(:))/num_nodes;    %Store Delta Q
         
         %================= PLOT and LINK SENSOR TOGETHER ===============
         plot(nodes(:,1),nodes(:,2), '.')
@@ -326,96 +329,6 @@ function [Q_update, Connectivity, R_nodes, ...
         drawnow;
         hold off
     end
-
-    
-%     %================= INITIALIZE STATES ===============
-% 
-%     [Nei_agent, A] = findNeighbors(nodes, r);   %Determine neighbors for each node
-%     for i = 1:num_nodes
-%         s_t(i) = length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
-%     end
-%     
-%     
-%     %================= START ITERATION ===============
-%     
-%     for iteration = 1:length(t)
-%         plot(safe_places(:,1),safe_places(:,2),'ro','LineWidth',2,'MarkerEdgeColor','r','MarkerFaceColor','r', 'MarkerSize',4.2)
-%         hold on
-%         
-%         %Initialize sum values for iteration
-%         A_sum_cooQ(iteration) = 0;
-%         R_sum_all(iteration) = 0;
-%         
-%         %Choose actions for each node
-%         for i = 1:num_nodes
-%             a_next(i) = select_action(Q_update, s_t(i), epsilon_learning, nactions); %Node selects an action
-%             A_sum_cooQ(iteration) = A_sum_cooQ(iteration) + a_next(i);  %Save action
-%         end
-%         
-%         %Each node takes action a_next(i)
-%         [Nei_agent, A] = findNeighbors(nodes, r);
-%         [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r, d, p_nodes, n, a_next); %last param used to be qt1
-%         p_nodes = (nodes - nodes_old)/delta_t; %COMPUTE velocities of sensor nodes
-% %         p_nodes_all{iteration} = p_nodes; %SAVE VELOCITY OF ALL NODES
-%         nodes_old = nodes;
-%         nodes = nodes_old + p_nodes*delta_t  + Ui*delta_t*delta_t /2;
-%         mean_Delta_Q(iteration,:) = mean(nodes); %Compute position of COM of MSN
-%         plot(mean_Delta_Q(:,1),mean_Delta_Q(:,2),'ro','LineWidth',2,'MarkerEdgeColor','k', 'MarkerFaceColor','k','MarkerSize',4.2)
-%         hold on
-%         q_nodes_all{iteration} = nodes; %q_nodes_all{iteration}(:,:) = nodes;
-%         Connectivity(iteration)= (1/(num_nodes))*rank(A);
-%         
-%         %Observe R and S'
-%         s_next = [];    %Keep track of new states of nodes
-%         [Nei_agent, A] = findNeighbors(nodes, r); %Determine neighbors for each node
-%         for i = 1:num_nodes
-%             s_next(i) = DiscretizeState(nodes, i, Nei_agent{i});%length(Nei_agent{i}) + 1;  %Node's initial state = number of neighbors, +1 because states are indexed at 1
-%             connect = (1/(num_nodes))*rank(A);
-%             if (1/(num_nodes))*rank(A) == 1
-%                 %fully connected MSN
-%                 s_next(i) = 2;
-%             end
-%             
-%             %assign reward
-%             if length(Nei_agent{i}) < 6
-%                 reward = length(Nei_agent{i});
-%             else
-%                 reward = 6;
-%             end
-%             R_nodes(iteration, i) = reward; %Save reward value
-%             R_sum_all(iteration) = R_sum_all(iteration) + reward;   %save reward value
-%             newMax = max(Q_update(s_next(i),:));  %get max reward of new state from Q-table
-%             Q_component = Q_update(s_t(i),a_next(i)) + alpha * (reward + gamma*newMax - Q_update(s_t(i),a_next(i)));
-%             
-%             %sum Q-values of neighbors
-%             Q_neigh_sum = 0;
-%             for j = 1:length(Nei_agent{i})
-%                 Q_neigh_sum = Q_neigh_sum + Q_update(s_t(Nei_agent{i}(j)), a_next(i));
-%             end
-%             
-%             Q_update(s_t(i),a_next(i)) = 0.001 * ((w * Q_component) + ((1-w)*Q_neigh_sum)); %Update node's q table
-%         end
-%         
-%         %Set S = S'
-%         for i = 1:num_nodes
-%             s_t(i) = s_next(i);
-%         end
-%         
-%         %================= PLOT and LINK SENSOR TOGETHER ===============
-%         plot(nodes(:,1),nodes(:,2), '.')
-%         hold on
-%         plot(nodes(:,1),nodes(:,2), 'k>','LineWidth',.2,'MarkerEdgeColor','k','MarkerFaceColor','k','MarkerSize',5)
-%         hold off
-%         for node_i = 1:num_nodes
-%             tmp=nodes(Nei_agent{node_i},:);
-%             for j = 1:size(nodes(Nei_agent{node_i},1))
-%                 line([nodes(node_i,1),tmp(j,1)],[nodes(node_i,2),tmp(j,2)]) 
-%             end
-%         end
-%         drawnow;
-%         hold off
-%     end
-
 end
 
 function [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r, d, p_nodes, dimensions, a_nexts)
@@ -448,7 +361,7 @@ function [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r,
 %         Controls the positions of the nodes in the MSN as time progresses
     
     % Set constants
-    c1_alpha = 15; %ORIGINALLY 30, 67, 10
+    c1_alpha = 5.6;%15; %ORIGINALLY 30, 67, 10
     c2_alpha = 2*sqrt(c1_alpha);
     c1_mt = 1.1;    % ORIGINALLY 1.1, 75, 500
     Ui = zeros(num_nodes, dimensions);  % initialize Ui matrix to all 0's
@@ -459,9 +372,8 @@ function [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r,
     % Sum gradient and consensus values for each node i
     for i = 1:num_nodes
         q_mt = actionToPoint(a_nexts(i)); %Get target for node based off its a_next value
-        %q_mt = actionToPoint(3); %Make all nodes go to point 3
+        %q_mt = actionToPoint(3); %Make all nodes go to point 3 - TEST PURPOSES
         
-        % EDIT - commented section below for initial simplified Ui
         for j = 1:length(Nei_agent{i})
             % i refers to node i
             % j refers to the jth neighbor of node i
@@ -479,7 +391,87 @@ function [Ui] = inputcontrol_Algorithm2(nodes, Nei_agent, num_nodes, epsilon, r,
     end
 end
 
+function states = BuildStateList(n)
+%     Builds the list of states for RL (assuming 2 dimensions).
+%     
+%     Parameters
+%     -------------
+%     n : double
+%         The number of nodes in the MSN
+%     
+%     Returns
+%     -------------
+%     states : double array
+%         The encoded states, corresponding to the node index of a given
+%         node's neighbor
+     
+    states = zeros(n*2 +2, 2);
+    for row = 1:n*2 +2
+       for col = 1:2
+           if col == 1
+               if mod(row, 2) == 0
+                   %even row
+                   states(row,col) = row/2 - 1;
+               else
+                   %odd row
+                   states(row,col) = floor(row/2);
+               end
+           else
+              % second column
+              states(row,col) = mod(row-1, 2);
+           end
+       end
+    end
+end
+
+function actions = BuildActionList()
+%     Builds the list of actions for RL.
+%     
+%     Returns
+%     --------------
+%     actions : double array
+%         The encoded actions, corresponding with safe places for robots to go to
+    
+    actions = 1:4;
+end
+
+function Q = BuildQtableStorage(num_nodes, nstates, nactions)
+%     Builds the storage for all the nodes' Q tables.
+%     
+%     Parameters
+%     ------------
+%     num_nodes : double
+%         The number of nodes in the network
+%     nstates : double
+%         Number of states
+%     nactions : double
+%         Number of actions
+%         
+%     Returns
+%     -----------
+%     Q : cell array
+%         The initial Q table for each node
+    
+    Q = cell(1, num_nodes);
+    for i = 1:num_nodes
+       Q{i} = rand(nstates, nactions); %initialize Q table with arbitrary values between 0 and 1
+       Q{i}(2,:) = 0;   %initialize goal state with 0
+    end
+end
+
 function q_mt = actionToPoint(action)
+%     Converts an action index to a point on a 2D coordinate system.
+%     
+%     Parameters
+%     ------------
+%     action : double
+%         The action index from the action list
+%         
+%     Returns
+%     ------------
+%     q_mt : double array (1x2)
+%         The 2D position corresponding to the action
+        
     q_mt = [0,0];
     switch action
         case 1
@@ -491,6 +483,41 @@ function q_mt = actionToPoint(action)
         case 4
             q_mt = [300,0];
     end
+end
+
+function state = DiscretizeState(nodes, currNodeInd, neighborList)
+%     Returns a single state for a node from that node's list of neighbors.
+%     
+%     Parameters
+%     ------------
+%     nodes : double matrix
+%         Positions of nodes
+%     currNodeInd : double
+%         Index of node whose state is being determined
+%     neighborList : double array
+%         Indices of neighbor nodes for a single node
+%         
+%     Returns
+%     ------------
+%     state : double
+%         Encoded state value
+
+    if isempty(neighborList)
+        state = 1;
+        return;
+    end
+      
+    minDist = realmax;  %initialize initial distance to largest floating-point value
+    minInd = 1;
+    for i = 1:length(neighborList)
+        dist = norm(nodes(currNodeInd, :) - nodes(neighborList(i),:));
+        if dist < minDist
+            minDist = dist;
+            minInd = neighborList(i);
+        end
+    end
+    
+    state = (minInd + 1) * 2;
 end
 
 function [Nei_agent, A] = findNeighbors(nodes, range)
@@ -548,63 +575,12 @@ function a = select_action(Q, S, epsilon, num_actions)
 %     a : double
 %         The selected action the robot will take
 
-    n = randi([0,1]);
+    n = rand;
     if n < epsilon
         a = randi([1,num_actions]);
     else
         [maxReward, max_actions] = max(Q(S,:));
         a = max_actions(1);
-    end
-end
-
-function states = BuildStateList(n)
-%     Builds the list of states for RL (assuming 2 dimensions).
-%     
-%     Parameters
-%     -------------
-%     n : double
-%         The number of nodes in the MSN
-%     
-%     Returns
-%     -------------
-%     states : double array
-%         The encoded states, determined by the number of neighbors a node
-%         can have
-     
-    states = zeros(n*2 +2, 2);
-    for row = 1:n*2 +2
-       for col = 1:2
-           if col == 1
-               if mod(row, 2) == 0
-                   %even row
-                   states(row,col) = row/2 - 1;
-               else
-                   %odd row
-                   states(row,col) = floor(row/2);
-               end
-           else
-              % second column
-              states(row,col) = mod(row-1, 2);
-           end
-       end
-    end
-end
-
-function actions = BuildActionList()
-%     Builds the list of actions for RL.
-%     
-%     Returns
-%     --------------
-%     actions : double array
-%         The encoded actions, corresponding with safe places for robots to go to
-    
-    actions = 1:4;
-end
-
-function Q = BuildQtableStorage(num_nodes, nstates, nactions)
-    Q = cell(1, num_nodes);
-    for i = 1:num_nodes
-       Q{i} = rand(nstates, nactions); %initialize Q table with arbitrary values between 0 and 1
     end
 end
 
@@ -803,39 +779,4 @@ function result = sigma1(z)
 %     result : double
 
     result = z / sqrt(1+z^2);
-end
-
-function state = DiscretizeState(nodes, currNodeInd, neighborList)
-%     Returns a single state for a node from that node's list of neighbors.
-%     
-%     Parameters
-%     ------------
-%     nodes : double matrix
-%         Positions of nodes
-%     currNodeInd : double
-%         Index of node whose state is being determined
-%     neighborList : double array
-%         Indices of neighbor nodes for a single node
-%         
-%     Returns
-%     ------------
-%     state : double
-%         Encoded state value
-
-    if isempty(neighborList)
-        state = 1;
-        return;
-    end
-      
-    minDist = realmax;  %initialize initial distance to largest floating-point value
-    minInd = 1;
-    for i = 1:length(neighborList)
-        dist = norm(nodes(currNodeInd, :) - nodes(neighborList(i),:));
-        if dist < minDist
-            minDist = dist;
-            minInd = neighborList(i);
-        end
-    end
-    
-    state = (minInd + 1) * 2;
 end
