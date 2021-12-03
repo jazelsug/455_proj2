@@ -206,6 +206,8 @@ function [Q_update, Connectivity, R_nodes, R_sum_all, ...
 %         Individual reward values for all nodes over this episode
 %     R_sum_all : double array
 %         Sum of reward values for all nodes over this episode
+%     A_nodes : double matrix
+%         Individual action values for all nodes over this episode
 %     A_sum_cooQ : double array
 %         Actions taken for all nodes over this episode
 %     mean_Delta_Q : double matrix
