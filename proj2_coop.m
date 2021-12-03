@@ -138,7 +138,6 @@ title('Network Connectivity over learning episode')
 grid on
 
 %Individual Action Selection of Nodes
-%A_ind_episodes{i}
 A_each_node = zeros(length(t)*maxepisodes, num_nodes);
 for ep = 1:maxepisodes
     temp = A_ind_episodes{ep};
@@ -304,9 +303,10 @@ function [Q_update, Connectivity, R_nodes, R_sum_all, ...
             R_sum_all(iteration) = R_sum_all(iteration) + reward;
             
             a_next(i) = select_action(Q_update{i}, s_next(i), epsilon_learning, nactions); %Choose next action
-            A_nodes(iteration, i) = a_next(i);
             
-            A_sum_cooQ(iteration) = A_sum_cooQ(iteration) + a_next(i);  %Save next action
+            %Save next action
+            A_nodes(iteration, i) = a_next(i);            
+            A_sum_cooQ(iteration) = A_sum_cooQ(iteration) + a_next(i);
             
             Q_past{i} = Q_update{i};    %Store past Q table
                 

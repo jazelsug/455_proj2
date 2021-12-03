@@ -30,6 +30,7 @@ Connectivity_episodes = cell(1, maxepisodes);
 Connectivity_episodes_learning = cell(1, maxepisodes);
 R_ind_episodes = cell(1, maxepisodes);
 R_all_episodes = cell(1, maxepisodes);
+A_ind_episodes = cell(1, maxepisodes);
 A_sum_cooQ_episodes = cell(1, maxepisodes);
 Topo_eva_all_epi = cell(1, maxepisodes);
 mean_Delta_Q_epi = cell(1, maxepisodes);
@@ -48,11 +49,12 @@ end
 for i=1:maxepisodes
     nodes = 50.*rand(num_nodes,n)+50.*repmat([0 1],num_nodes,1);    %Generate new node positions each episode
     %Training
-    [Q_update, Connectivity, R_nodes, R_sum_all, A_sum_cooQ, mean_Delta_Q, q_nodes_all]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
+    [Q_update, Connectivity, R_nodes, R_sum_all, A_nodes, A_sum_cooQ, mean_Delta_Q, q_nodes_all]  = Q_Learning(Q_update, statelist, actionlist, nstates, nactions, num_nodes, n, nodes, epsilon_learning, delta_t, t, safe_places);
     %Save data
     Connectivity_episodes{i} = Connectivity;
     R_ind_episodes{i} = R_nodes;
     R_all_episodes{i} = R_sum_all;
+    A_ind_episodes{i} = A_nodes;
     A_sum_cooQ_episodes{i} = A_sum_cooQ;
     mean_Delta_Q_epi{i} = mean_Delta_Q; 
     q_nodes_epi{i} = q_nodes_all;
@@ -135,6 +137,20 @@ figure(10), plot(Con_epi_mat)
 title('Network Connectivity over learning episode')
 grid on
 
+%Individual Action Selection of Nodes
+A_each_node = zeros(length(t)*maxepisodes, num_nodes);
+for ep = 1:maxepisodes
+    temp = A_ind_episodes{ep};
+   for i = 1:length(t)
+      for j = 1:num_nodes
+          A_each_node((ep-1)*length(t) + i, j) = temp(i, j);
+      end
+   end
+end
+figure(11), plot(A_each_node);
+title('Individual Action over learning episodes')
+grid on
+
 % %Plot reward in last episode
 % [R_all_diff0, index_R_all]= find(R_all>0);
 % figure(11), plot(R_all(index_R_all))
@@ -144,8 +160,8 @@ grid on
 
 %================= FUNCTIONS ===============
 
-function [Q_update, Connectivity, R_nodes, ...
-    R_sum_all, A_sum_cooQ, mean_Delta_Q, q_nodes_all] = Q_Learning(Q_update, ...
+function [Q_update, Connectivity, R_nodes, R_sum_all, ...
+    A_nodes, A_sum_cooQ, mean_Delta_Q, q_nodes_all] = Q_Learning(Q_update, ...
     statelist, actionlist, nstates, nactions, num_nodes, ...
     n, nodes, epsilon_learning, delta_t, t, safe_places)
 %     Conducts the Q-learning reinforcement algorithm.
@@ -189,6 +205,8 @@ function [Q_update, Connectivity, R_nodes, ...
 %         Individual reward values for all nodes over this episode
 %     R_sum_all : double array
 %         Sum of reward values for all nodes over this episode
+%     A_nodes : double matrix
+%         Individual action values for all nodes over this episode
 %     A_sum_cooQ : double array
 %         Actions taken for all nodes over this episode
 %     mean_Delta_Q : double matrix
@@ -209,6 +227,7 @@ function [Q_update, Connectivity, R_nodes, ...
     R_sum_all = 1:length(t);    %Sum individual reward values for nodes
     R_nodes = zeros(length(t), 10); %Save reward values for nodes
     A_sum_cooQ = 1:length(t);   %Save action values for nodes
+    A_nodes = zeros(length(t), 10);  %Save individual action values for nodes
     q_nodes_all = cell(length(t),1);    %Save positions of nodes over the episode
     mean_Delta_Q = 1:length(t); %Save average changes in Q table values over episode
 
@@ -284,7 +303,9 @@ function [Q_update, Connectivity, R_nodes, ...
             
             a_next(i) = select_action(Q_update{i}, s_next(i), epsilon_learning, nactions); %Choose next action
             
-            A_sum_cooQ(iteration) = A_sum_cooQ(iteration) + a_next(i);  %Save next action
+            %Save next action
+            A_nodes(iteration, i) = a_next(i);            
+            A_sum_cooQ(iteration) = A_sum_cooQ(iteration) + a_next(i);
             
             Q_past{i} = Q_update{i};    %Store past Q table
                 
